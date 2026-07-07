@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="TableStakes logo: an emerald poker chip with a rising chip-count chart">
+  <defs>
+    <radialGradient id="felt" cx="50%" cy="42%" r="72%">
+      <stop offset="0%" stop-color="#1d2521"/>
+      <stop offset="100%" stop-color="#131313"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="55%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#232b27"/>
+      <stop offset="100%" stop-color="#181f1c"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+  </defs>
+
+  <!-- background disc -->
+  <circle cx="128" cy="128" r="124" fill="url(#felt)"/>
+
+  <!-- chip rim -->
+  <circle cx="128" cy="128" r="112" fill="url(#rim)"/>
+
+  <!-- edge notches: 8 charcoal insets around the rim, classic chip look -->
+  <g fill="#131313">
+    <rect x="116" y="12"  width="24" height="26" rx="7"/>
+    <rect x="116" y="218" width="24" height="26" rx="7"/>
+    <rect x="12"  y="116" width="26" height="24" rx="7"/>
+    <rect x="218" y="116" width="26" height="24" rx="7"/>
+    <g transform="rotate(45 128 128)">
+      <rect x="116" y="12"  width="24" height="26" rx="7"/>
+      <rect x="116" y="218" width="24" height="26" rx="7"/>
+      <rect x="12"  y="116" width="26" height="24" rx="7"/>
+      <rect x="218" y="116" width="26" height="24" rx="7"/>
+    </g>
+  </g>
+
+  <!-- inner face -->
+  <circle cx="128" cy="128" r="84" fill="url(#face)"/>
+  <circle cx="128" cy="128" r="84" fill="none" stroke="#34d399" stroke-opacity="0.35" stroke-width="2"/>
+  <circle cx="128" cy="128" r="76" fill="none" stroke="#10b981" stroke-opacity="0.18" stroke-width="1.5" stroke-dasharray="4 7"/>
+
+  <!-- rising chip-count bars: the app counts stacks -->
+  <g>
+    <rect x="86"  y="146" width="20" height="34" rx="5" fill="url(#bar)" opacity="0.75"/>
+    <rect x="114" y="122" width="20" height="58" rx="5" fill="url(#bar)" opacity="0.9"/>
+    <rect x="142" y="94"  width="20" height="86" rx="5" fill="url(#bar)"/>
+    <!-- amber dealer-button dot crowning the tallest stack -->
+    <circle cx="152" cy="80" r="9" fill="#f2b21b"/>
+  </g>
+
+  <!-- subtle baseline under the bars -->
+  <rect x="80" y="184" width="96" height="4" rx="2" fill="#34d399" fill-opacity="0.4"/>
+</svg>

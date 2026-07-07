@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" width="960" height="300" role="img" aria-label="TableStakes — phone-based chip counting for home poker nights">
+  <defs>
+    <radialGradient id="bfelt" cx="30%" cy="30%" r="110%">
+      <stop offset="0%" stop-color="#1d2b24"/>
+      <stop offset="55%" stop-color="#141a17"/>
+      <stop offset="100%" stop-color="#101312"/>
+    </radialGradient>
+    <linearGradient id="brim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="55%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="bface" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#232b27"/>
+      <stop offset="100%" stop-color="#181f1c"/>
+    </linearGradient>
+    <linearGradient id="bbar" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+    <linearGradient id="wordmark" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e9ede9"/>
+      <stop offset="100%" stop-color="#c4d0c8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- felt background -->
+  <rect width="960" height="300" rx="20" fill="url(#bfelt)"/>
+  <rect x="1.5" y="1.5" width="957" height="297" rx="19" fill="none" stroke="#10b981" stroke-opacity="0.25" stroke-width="3"/>
+
+  <!-- faint oversized suit marks in the felt -->
+  <g fill="#10b981" opacity="0.05">
+    <path d="M812 30c-20 34-56 56-56 92 0 26 21 44 44 40-6 20-18 32-30 40h84c-12-8-24-20-30-40 23 4 44-14 44-40 0-36-36-58-56-92z"/>
+    <circle cx="120" cy="252" r="34"/>
+    <circle cx="96" cy="222" r="34"/>
+    <circle cx="144" cy="222" r="34"/>
+    <path d="M96 258h48l-24 30z" transform="translate(0 -10)"/>
+  </g>
+
+  <!-- the chip, scaled from the logo -->
+  <g transform="translate(58 40) scale(0.86)">
+    <circle cx="128" cy="128" r="112" fill="url(#brim)"/>
+    <g fill="#131313">
+      <rect x="116" y="12"  width="24" height="26" rx="7"/>
+      <rect x="116" y="218" width="24" height="26" rx="7"/>
+      <rect x="12"  y="116" width="26" height="24" rx="7"/>
+      <rect x="218" y="116" width="26" height="24" rx="7"/>
+      <g transform="rotate(45 128 128)">
+        <rect x="116" y="12"  width="24" height="26" rx="7"/>
+        <rect x="116" y="218" width="24" height="26" rx="7"/>
+        <rect x="12"  y="116" width="26" height="24" rx="7"/>
+        <rect x="218" y="116" width="26" height="24" rx="7"/>
+      </g>
+    </g>
+    <circle cx="128" cy="128" r="84" fill="url(#bface)"/>
+    <circle cx="128" cy="128" r="84" fill="none" stroke="#34d399" stroke-opacity="0.35" stroke-width="2"/>
+    <circle cx="128" cy="128" r="76" fill="none" stroke="#10b981" stroke-opacity="0.18" stroke-width="1.5" stroke-dasharray="4 7"/>
+    <rect x="86"  y="146" width="20" height="34" rx="5" fill="url(#bbar)" opacity="0.75"/>
+    <rect x="114" y="122" width="20" height="58" rx="5" fill="url(#bbar)" opacity="0.9"/>
+    <rect x="142" y="94"  width="20" height="86" rx="5" fill="url(#bbar)"/>
+    <circle cx="152" cy="80" r="9" fill="#f2b21b"/>
+    <rect x="80" y="184" width="96" height="4" rx="2" fill="#34d399" fill-opacity="0.4"/>
+  </g>
+
+  <!-- wordmark -->
+  <g font-family="'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+    <text x="330" y="152" font-size="72" font-weight="700" fill="url(#wordmark)" letter-spacing="0.5">Table<tspan fill="#34d399">Stakes</tspan></text>
+    <text x="333" y="198" font-size="26" fill="#9fb3a8" letter-spacing="0.3">Your phones are the chips.</text>
+    <text x="333" y="236" font-size="19" fill="#6f8378" letter-spacing="0.2">Chip counting for home poker nights — no chips, no accounts.</text>
+  </g>
+
+  <!-- amber accent line under the wordmark, dealer-button nod -->
+  <rect x="334" y="164" width="270" height="4" rx="2" fill="#f2b21b" opacity="0.85"/>
+</svg>

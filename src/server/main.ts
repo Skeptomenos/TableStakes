@@ -19,6 +19,7 @@ import {
   randomIdGenerator,
   systemClock,
 } from './services'
+import { welcomeBanner } from './welcome'
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url))
 // The built bundle lives at dist/server.mjs; the app dir is its parent.
@@ -62,12 +63,15 @@ const { httpServer, io, service } = createPokerServer({
 
 // Bind all interfaces so phones on the same LAN can reach the table.
 httpServer.listen(port, '0.0.0.0', () => {
+  const addresses = lanAddresses()
   log.info('server.start', `listening on http://localhost:${port}`, {
     port,
-    addresses: lanAddresses(),
+    addresses,
     dbPath,
     node: process.version,
   })
+  // Host-friendly welcome: LAN URL + scannable QR straight to the table.
+  console.log(welcomeBanner({ port, addresses }))
 })
 
 // Cheap trend data for long game nights.

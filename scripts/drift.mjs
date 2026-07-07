@@ -19,6 +19,7 @@ for (const doc of [
   'TESTING.md',
   'DESIGN.md',
   'README.md',
+  'CONTRIBUTING.md',
   'AGENTS.md',
 ]) {
   if (!existsSync(path.join(appDir, doc))) {
@@ -61,11 +62,19 @@ for (const script of requiredScripts) {
   }
 }
 
-// 4. README documents the validation gate and dev startup.
+// 4. The user README documents the player entry point; the contributor
+// guide documents the dev commands (README went game-centric — the
+// developer literals live in CONTRIBUTING.md now).
 const readme = read('README.md')
-for (const literal of ['pnpm validate', 'pnpm dev', 'pnpm install', 'pnpm logs:report']) {
+for (const literal of ['./start.sh', 'CONTRIBUTING.md']) {
   if (!readme.includes(literal)) {
     failures.push(`README.md must document \`${literal}\``)
+  }
+}
+const contributing = read('CONTRIBUTING.md')
+for (const literal of ['pnpm validate', 'pnpm dev', 'pnpm install', 'pnpm logs:report']) {
+  if (!contributing.includes(literal)) {
+    failures.push(`CONTRIBUTING.md must document \`${literal}\``)
   }
 }
 

@@ -14,7 +14,8 @@ The app is intentionally not a card engine. It should handle the chip math, tabl
 
 ## Key Documents
 
-- [README.md](README.md) - project overview and initial scope.
+- [README.md](README.md) - user-facing overview: what the game is, install, start, features (TableStakes branding).
+- [CONTRIBUTING.md](CONTRIBUTING.md) - developer guide: stack, setup, validation gate, how changes land.
 - [SPEC.md](SPEC.md) - product behavior contract and MVP acceptance criteria.
 - [ARCHITECTURE.md](ARCHITECTURE.md) - technical architecture, domain boundaries, persistence, realtime sync, and Effect usage.
 - [TESTING.md](TESTING.md) - unit, integration, realtime, E2E, and validation-gate strategy.

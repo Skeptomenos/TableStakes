@@ -1,5 +1,4 @@
 import { existsSync } from 'node:fs'
-import { networkInterfaces } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -7,6 +6,7 @@ import express, { type Express } from 'express'
 
 import { APP_NAME, GAME_ROUTE_PREFIX, HEALTH_ROUTE } from '../shared/routes'
 import type { GameService } from './game-service'
+import { lanAddresses } from './lan'
 import { noopLogger, truncateSessionId, type Logger, type LogLevel } from './logger'
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url))
@@ -23,13 +23,9 @@ const CLIENT_LOG_LEVELS: ReadonlySet<string> = new Set(['error', 'warn', 'info']
 const MAX_CLIENT_LOG_ENTRIES = 50
 const MAX_CLIENT_LOG_ENTRY_BYTES = 2048
 
-/** Non-internal IPv4 addresses for the share screen's LAN hints. */
-export function lanAddresses(): string[] {
-  return Object.values(networkInterfaces())
-    .flatMap((list) => list ?? [])
-    .filter((iface) => iface.family === 'IPv4' && !iface.internal)
-    .map((iface) => iface.address)
-}
+// LAN detection lives in ./lan (deterministic private-LAN-first ordering,
+// PR #200 review); re-exported for existing import sites.
+export { lanAddresses }
 
 export function createHttpApp(options: CreateHttpAppOptions = {}): Express {
   // The built server bundle lives at dist/server.mjs next to dist/client/.
