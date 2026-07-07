@@ -1,0 +1,12 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+*.db
+*.db-journal
+.DS_Store
+data/
+.e2e-data/
+# Agent dogfood scratch (browser-evidence sessions, not part of the app).
+.dogfood-data/
+.gate-out.log
