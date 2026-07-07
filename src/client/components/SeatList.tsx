@@ -59,7 +59,10 @@ export function SeatList({ snapshot, onClaim }: SeatListProps) {
           const state = seatState(player)
           return (
             <li key={seatIndex} className="seat-list__row">
-              <span className="seat-list__seat">Seat {seatIndex + 1}</span>
+              <span className="seat-list__seat">
+                <span className="seat-list__no">{seatIndex + 1}</span>
+                <span className="seat-list__seat-word">Seat</span>
+              </span>
               <span className="seat-list__name">
                 {player ? player.name : '[Empty]'}
               </span>

@@ -1,90 +1,60 @@
 ---
-name: Deep Stack Logic
+name: Felt & Ledger
 colors:
-  surface: '#131313'
-  surface-dim: '#131313'
-  surface-bright: '#393939'
-  surface-container-lowest: '#0e0e0e'
-  surface-container-low: '#1c1b1b'
-  surface-container: '#201f1f'
-  surface-container-high: '#2a2a2a'
-  surface-container-highest: '#353534'
-  on-surface: '#e5e2e1'
-  on-surface-variant: '#bbcabf'
-  inverse-surface: '#e5e2e1'
-  inverse-on-surface: '#313030'
-  outline: '#86948a'
-  outline-variant: '#3c4a42'
-  surface-tint: '#4edea3'
-  primary: '#4edea3'
-  on-primary: '#003824'
-  primary-container: '#10b981'
-  on-primary-container: '#00422b'
-  inverse-primary: '#006c49'
-  secondary: '#ffb95f'
-  on-secondary: '#472a00'
-  secondary-container: '#ee9800'
-  on-secondary-container: '#5b3800'
-  tertiary: '#ffb3ad'
-  on-tertiary: '#68000a'
-  tertiary-container: '#ff7a73'
-  on-tertiary-container: '#79000e'
-  error: '#ffb4ab'
-  on-error: '#690005'
-  error-container: '#93000a'
-  on-error-container: '#ffdad6'
-  background: '#131313'
-  on-background: '#e5e2e1'
-  surface-variant: '#353534'
+  felt-950: '#0e1210'
+  felt-900: '#151b17'
+  felt-850: '#1b221e'
+  hairline: '#2a332d'
+  ivory: '#e9e5d9'
+  ivory-dim: '#9aa39c'
+  emerald-500: '#10b981'
+  emerald-900: '#0b3b2c'
+  emerald-ink: '#04241a'
+  amber-400: '#e8a33d'
+  amber-ink: '#3a2a08'
+  claret-500: '#a83e43'
 typography:
   display-pot:
-    fontFamily: Inter
-    fontSize: 48px
+    fontFamily: JetBrains Mono Variable
+    fontSize: 34px
     fontWeight: '700'
-    lineHeight: 48px
-    letterSpacing: 0
-  headline-player:
-    fontFamily: Inter
-    fontSize: 18px
-    fontWeight: '600'
-    lineHeight: 24px
-    letterSpacing: 0
-  headline-player-mobile:
-    fontFamily: Inter
-    fontSize: 16px
-    fontWeight: '600'
-    lineHeight: 20px
-    letterSpacing: 0
+    lineHeight: 37px
+    numeric: tabular-nums
   stack-value:
-    fontFamily: Inter
-    fontSize: 24px
-    fontWeight: '700'
-    lineHeight: 32px
-    letterSpacing: 0
-  body-main:
-    fontFamily: Inter
-    fontSize: 14px
-    fontWeight: '400'
+    fontFamily: JetBrains Mono Variable
+    fontSize: 17px
+    fontWeight: '600'
     lineHeight: 20px
-    letterSpacing: 0
-  label-caps:
-    fontFamily: Inter
+    numeric: tabular-nums
+  headline-player:
+    fontFamily: Inter Variable
     fontSize: 12px
     fontWeight: '600'
     lineHeight: 16px
-    letterSpacing: 0
+  body-main:
+    fontFamily: Inter Variable
+    fontSize: 14px
+    fontWeight: '400'
+    lineHeight: 20px
+  label-caps:
+    fontFamily: Inter Variable
+    fontSize: 12px
+    fontWeight: '600'
+    lineHeight: 16px
+    transform: uppercase
   chip-badge:
-    fontFamily: Inter
+    fontFamily: Inter Variable
     fontSize: 11px
     fontWeight: '700'
     lineHeight: 12px
-    letterSpacing: 0
+  puck:
+    fontFamily: JetBrains Mono Variable
+    fontSize: 8.5px
+    fontWeight: '700'
 rounded:
   sm: 0.25rem
   DEFAULT: 0.5rem
-  md: 0.75rem
-  lg: 1rem
-  xl: 1.5rem
+  card: 10px
   full: 9999px
 spacing:
   base: 4px
@@ -95,14 +65,15 @@ spacing:
 
 # Poker Chip Counter Design
 
-Status: Implemented MVP contract — a LOCKED visual uplift supersedes this file as the design target
-Last reviewed from Stitch: 2026-07-01
+Status: Implemented contract — Felt & Ledger (visual v2, approved and locked 2026-07-07, implemented 2026-07-07)
+Last reviewed from Stitch: 2026-07-01 (superseded as visual target by the Felt & Ledger uplift)
 
-> **Design uplift (locked 2026-07-07):** a visual v2 — "Felt & Ledger" — has been designed
-> and approved: a felt-black palette, monospaced ledger numerals, and a stadium-shaped table
-> rail with fixed-size player cards centered on the rail at equal spacing. This file continues
-> to describe what is IMPLEMENTED today and will be rewritten when the uplift lands. Until
-> then, treat the visual details below as current-but-superseded for any new styling work.
+The app renders the "Felt & Ledger" design: felt-tinted black surfaces, warm ivory ink,
+JetBrains Mono ledger numerals for every chip/money figure, chip-puck position markers, and a
+stadium-rail table with fixed-geometry player cards centered ON the rail at equal arc-length
+steps. Emerald strictly means "you can act"; amber is attention; claret appears only inside
+destructive confirmation sheets. Fonts are self-hosted (variable woff2) so the app looks right
+on a LAN with no internet.
 
 ## Stitch Source
 
@@ -124,11 +95,11 @@ Visible Stitch screens used for this document:
 - `10-Player Poker Table Overview` - `projects/4189937017243751264/screens/28fbf9cd46bf49638501b136b219eaaa`
 - `MVP Hand Settlement` - `projects/4189937017243751264/screens/ae598352f7cf4a839b50edb37f56729a`
 
-The Stitch project still exposes older theme text in some metadata. When that conflicts with this file, this file wins. The implemented product uses Deep Stack Logic, not Midnight Casino, glassmorphism, decorative card dealing, or casino-room styling. Stitch screens may also show five-character alphanumeric table codes such as `#A7B29`; that is stale. Game codes are five-digit numeric codes per `SPEC.md`. The `Admin Setup` screen title is also stale: the MVP has no privileged admin role, and setup is a shared audited surface.
+The Stitch project still exposes older theme text in some metadata. When that conflicts with this file, this file wins. The implemented product uses Felt & Ledger (which superseded the earlier Deep Stack Logic language on 2026-07-07), not Midnight Casino, glassmorphism, decorative card dealing, or casino-room styling. Stitch screens may also show five-character alphanumeric table codes such as `#A7B29`; that is stale. Game codes are five-digit numeric codes per `SPEC.md`. The `Admin Setup` screen title is also stale: the MVP has no privileged admin role, and setup is a shared audited surface.
 
 ## Product Fit
 
-Deep Stack Logic is a dark, utilitarian, phone-first table instrument for private in-person poker games. The interface should feel like a precise shared ledger and table remote: compact, calm, numeric, and fast under low light.
+Felt & Ledger is a dark, utilitarian, phone-first table instrument for private in-person poker games. The interface should feel like a precise shared ledger and table remote: compact, calm, numeric, and fast under low light.
 
 The design should not feel like:
 
@@ -154,38 +125,38 @@ The design should not feel like:
 
 The YAML tokens above are the source of truth.
 
-- Background: `background` / `surface` (`#131313`).
-- Low panels: `surface-container-low` (`#1c1b1b`).
-- Cards and controls: `surface-container` (`#201f1f`) and `surface-container-high` (`#2a2a2a`).
-- Text: `on-surface` (`#e5e2e1`) and `on-surface-variant` (`#bbcabf`).
-- Active and primary affordance: `primary` (`#4edea3`) or `primary-container` (`#10b981`).
-- Primary text on emerald: always use `on-primary` or `on-primary-container`, never white.
-- Dealer and highlight markers: `secondary-container` with `on-secondary-container`.
-- Sit-out, interrupted, and warning states: `secondary` or `secondary-container`.
-- All-in, destructive, and high-risk states: `error` or `error-container`.
+- Background: `felt-950` (`#0e1210`) — felt-tinted black, never neutral gray.
+- Cards: `felt-900` (`#151b17`); raised surfaces (hero card, action bar, sheets): `felt-850` (`#1b221e`).
+- Borders and dividers: `hairline` (`#2a332d`), 1px — depth without shadows.
+- Text: `ivory` (`#e9e5d9`); secondary text and labels: `ivory-dim` (`#9aa39c`).
+- Act-now: `emerald-500` on primary actions, the turn ring/badge, and the live pot figure. Text on emerald is `emerald-ink`, never white. Emerald appears NOWHERE else — not on headings, the wordmark, or static text.
+- Attention (interrupted, soft warnings): `amber-400` with `amber-ink` for text on amber.
+- Destructive: `claret-500` ONLY inside confirmation sheets (fold/all-in/reset confirms). Resting buttons are never claret — the gap analysis explicitly rejected red-at-rest.
+- Sitting-out is a deliberate pause: outlined `ivory-dim` pill with a `⏸` glyph — visually distinct from amber problem states.
 
-Do not introduce a broad secondary palette during MVP implementation. The product should read as charcoal, emerald, amber, and red accents.
+Do not introduce a broader palette. The product reads as felt-black, ivory, one emerald, one amber, one claret.
 
 ## Typography
 
-Use Inter for all MVP UI. The Stitch screens currently use Inter across labels, stacks, and controls; keep that consistency.
+Two faces, self-hosted as variable woff2 under `src/client/app/fonts/` (the app must render correctly on an offline LAN — never load fonts from a CDN):
+
+- **JetBrains Mono Variable** — every chip/money figure: stacks, bets, pots, blinds, codes, money columns, correction/rebuy inputs. Always `font-variant-numeric: tabular-nums` so amounts align like a ledger. The `.num` utility class applies this role.
+- **Inter Variable** — all other UI text.
 
 Typography rules:
 
-- Use tabular numeric rendering where available for stacks, pots, and bet values.
-- Keep letter spacing at `0`. Do not use negative tracking for dense numbers.
-- Use uppercase labels sparingly for short metadata: `MAIN POT`, `BLINDS`, `MIN RAISE`, `LOCKED`.
-- Avoid hero-sized type inside compact panels.
-- Ensure long player names truncate or wrap without changing card dimensions.
+- Numbers are the product; they get the mono face everywhere, without exception.
+- Keep letter spacing at `0` for numerals (the five-digit code input may use wide tracking).
+- Uppercase labels sparingly for short metadata: `MAIN POT`, `JOIN A GAME`, section titles (12px/600).
+- Long player names truncate with ellipsis — never change card dimensions.
 
 ## Shape And Density
 
-- Standard card and control radius is 8px.
+- Player cards: 10px radius; other cards/controls 8px; pills 999px.
+- **Player cards have FIXED geometry: 96×64px, always.** No badge or state may change a card's size (locked decision 2). Pucks and status pills float outside the border box.
 - Bottom sheets may use a larger top radius up to 16px.
-- Icon buttons may be circular when the icon is the primary label.
-- Repeated player cards must have stable dimensions so status badges, stack changes, and hover/active states do not shift the table layout.
-- Use 4px spacing rhythm with 8px gutters and 12px card padding.
-- Avoid nested cards. A player card can sit on the table view; do not place separate decorative cards inside it.
+- 4px spacing rhythm, 8px gutters, 12px card padding, 44px minimum touch targets.
+- Hairline (1px `hairline`) on every raised surface; no drop-shadow depth except the puck's small lift shadow.
 
 ## App Shell
 
@@ -247,50 +218,32 @@ Setup rules:
 
 ## Live Table
 
-The live table follows `MVP Table Play` and `10-Player Poker Table Overview`.
+The live table implements the locked Felt & Ledger geometry (see `src/client/components/table-layout.ts`):
 
 Table layout:
 
-- A simple vertical oval table outline sits behind players.
-- Ten player seats can fit around the oval in portrait.
-- Player cards remain compact and stable.
-- The user's own active card may be larger than passive cards.
-- The active claimed seat uses an emerald ring or subtle emerald tint and a `Your Turn` label.
-- Folded players are visually muted with a `Folded` badge.
-- Thinking/current actor states can use a small emerald `Thinking` badge.
-- Dealer marker is a compact `D` badge.
-- Blind marker can appear as `BB 100` or `SB 50`.
-- Sitting-out uses an outlined, muted pause badge with a `⏸` glyph (deliberate pause — Slice 12 decision; it must never read as the amber problem state).
-- Interrupted/recovery uses amber and remains visually distinct from sitting-out.
+- The rail is a **stadium/racetrack** — straight sides with true semicircular ends, like real felt — rendered as a rounded rect with `border-radius = half the rail width`, a 1.5px border, felt radial gradient fill, and an inner betting line (hairline inset 12px). Not an ellipse.
+- **Card centers sit exactly ON the rail**, placed at **equal arc-length steps** along its perimeter — equal center-to-center distances between all adjacent cards (measured ≤5% chord spread at 6–10 seats).
+- The hero (your claimed seat) is ring index 0, pinned to **bottom-center**; other players follow in seat order CLOCKWISE as the viewer sees the screen — the next seat renders to the hero's LEFT, matching real deal order (walk: bottom → left → top → right). Spectators see the first seated player at bottom-center. Direction never changes mid-game.
+- Straight sides cap at 0.8× the arc radius on tall canvases; leftover vertical space centers the ring.
+- Ten seats fit in phone portrait with zero overlaps and no in-hand scrolling.
 
-Player cards show:
+Player cards (fixed 96×64):
 
-- Player name.
-- Current stack.
-- Current street commitment, formatted as `Bet: <amount>`.
-- Dealer, blind, folded, all-in, sitting-out, interrupted, or active badges as applicable.
-- Optional stack bar relative to starting stack or session peak.
+- Player name (truncating), mono stack, muted mono `Bet <amount>` line.
+- **Dealer/blind pucks float on the top-left corner**: 21px circles with a dashed inner ring and lift shadow — D is an ivory puck (like the real button), SB/BB are rimmed dark chips. Pucks are amount-less; blind amounts live in the action-bar context line.
+- **ONE status pill hovers centered over the bottom border**: priority Interrupted (amber) > Your Turn/Thinking (emerald-deep with emerald ring) > All-in (claret) > Folded (hairline on felt) > ⏸ Sitting out (outlined muted).
+- The hero card is felt-850, scaled 1.15× about its center (layout box unchanged), with an emerald border + soft glow when it is your turn.
+- Folded players dim to 55% opacity and lose stack weight — state is opacity + shape, not just a chip.
 
 ## Street And Pot Center
 
-The center of the table is not a standalone top-of-screen pot display. It is a compact table-center stack containing street placeholders and pots.
+The table center is a compact stack, positioned by the layout module:
 
-Street placeholders:
-
-- Pre-flop: five empty or dashed card placeholder slots with no filled community cards.
-- Flop: three filled placeholders and two dashed slots.
-- Turn: four filled placeholders and one dashed slot.
-- River/showdown: five filled placeholders.
-- Placeholders only indicate street count. They do not show card values.
-
-Pot stack:
-
-- Main pot appears first and largest, labeled `Main Pot`.
-- Pot values are live totals that include chips committed on the current street.
-- Side pots appear below in creation/display order, labeled `Side Pot 1`, `Side Pot 2`, and so on.
-- Each pot displays amount and eligible player names where space allows.
-- The table-play Stitch screen shows `Main Pot 1,200` with eligible names and `Side Pot 1 450`; preserve that pattern.
-- Pot chips must remain visually subordinate to turn/action controls; do not let side-pot cards crowd player seats.
+- Always five community-card placeholders (dashed hairline, 20% quieter than before), filling per street 0/3/4/5.
+- **The main pot is the table's one dominant figure**: `MAIN POT` uppercase label over a 34px emerald mono amount (live total includes current-street commitments).
+- Side pots render as compact hairline ledger rows beneath the main figure (label · mono amount · eligible names).
+- Do not render card faces, suits, or hole cards — placeholders only.
 
 ## Phone Action Panel
 
@@ -375,7 +328,7 @@ Settlement interactions require confirmation before chip movement is committed.
 
 ## Cash-Out And History
 
-Stitch does not yet provide a complete cash-out/history screen. Implement it using the same Deep Stack Logic patterns:
+Stitch does not yet provide a complete cash-out/history screen. Implement it using the same Felt & Ledger patterns:
 
 - Charcoal full-screen surface.
 - Dense table-style rows instead of decorative cards.
@@ -386,7 +339,7 @@ Stitch does not yet provide a complete cash-out/history screen. Implement it usi
 
 ## Host And Desktop Surfaces
 
-Stitch does not provide desktop screens. Host and laptop surfaces, including the share screen, table overview, history, and stats, reuse the same Deep Stack Logic patterns:
+Stitch does not provide desktop screens. Host and laptop surfaces, including the share screen, table overview, history, and stats, reuse the same Felt & Ledger patterns:
 
 - Same color tokens, Inter typography, and badge language as the mobile screens.
 - Dense table-style rows and wider multi-column layouts instead of new decorative components.
@@ -395,9 +348,12 @@ Stitch does not provide desktop screens. Host and laptop surfaces, including the
 
 ## Accessibility And Contrast
 
-- Emerald buttons use `on-primary` or `on-primary-container`; white text on emerald is not allowed.
+- Every text/background token pair in use passes WCAG AA (4.5:1). Audited 2026-07-07: ivory on felt-950/900/850 = 14.99/13.88/12.88; ivory-dim on felt-950/900/850 = 7.27/6.74/6.25; emerald-500 on felt-950 = 7.44; emerald-ink on emerald-500 = 6.51; emerald-500 on emerald-900 = 4.94; amber-ink on amber-400 = 6.43; amber-400 on felt-850 = 7.52; ivory on claret-500 = 4.85 (claret darkened from the draft value for exactly this).
+- Emerald buttons use `emerald-ink` text; white text on emerald is not allowed.
+- Keyboard focus is always visible: 2px emerald `:focus-visible` ring, offset 2px, on every interactive element.
+- `prefers-reduced-motion: reduce` collapses all transitions/animations.
 - Icon-only controls must have accessible names.
-- Status must not be color-only; use badges such as `Locked`, `Folded`, `Reclaim`, `All-In`, and `Your Turn`.
+- Status must not be color-only; use badges such as `Locked`, `Folded`, `Reclaim`, `All-in`, and `Your Turn`.
 - Button labels must fit at 390px phone width without truncating core action amounts.
 - Keep touch targets at least 40px high/wide for action and icon buttons.
 

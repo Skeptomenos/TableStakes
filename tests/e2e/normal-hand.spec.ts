@@ -47,10 +47,11 @@ test('three phones play a normal hand through auto-award and next hand', async (
   await host.getByRole('button', { name: 'Start Hand' }).click()
 
   // Live table appears on every phone with blinds posted: dealer Hosta,
-  // SB Anna 50, BB Ben 100; Hosta acts first pre-flop.
+  // SB Anna, BB Ben; Hosta acts first pre-flop. Pucks are amount-less
+  // (design uplift): blind AMOUNTS live in the action-bar context line.
   await expect(host.getByText('D', { exact: true })).toBeVisible()
-  await expect(anna.getByText('SB 50')).toBeVisible()
-  await expect(ben.getByText('BB 100')).toBeVisible()
+  await expect(anna.getByText('SB', { exact: true })).toBeVisible()
+  await expect(ben.getByText('BB', { exact: true })).toBeVisible()
   await expect(host.getByText('Your Turn')).toBeVisible()
 
   // No quick-chip preset bank anywhere.

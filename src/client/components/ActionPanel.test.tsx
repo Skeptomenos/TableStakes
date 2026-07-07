@@ -18,6 +18,14 @@ function renderPanel(snapshot: GameSnapshot, mySeat: number) {
   return onCommand
 }
 
+function renderWithContainer(snapshot: GameSnapshot, mySeat: number) {
+  const onCommand = vi.fn()
+  const utils = render(
+    <ActionPanel snapshot={snapshot} mySeat={mySeat} onCommand={onCommand} />,
+  )
+  return { ...utils, onCommand }
+}
+
 describe('amount selection', () => {
   it('defaults to the current minimum and shows blinds context', () => {
     renderPanel(startedHand({ playerCount: 3 }), 0)
@@ -121,6 +129,33 @@ describe('actions', () => {
     expect(
       (screen.getByRole('button', { name: 'Fold' }) as HTMLButtonElement).disabled,
     ).toBe(true)
+  })
+
+  it('renders a stable four-slot action row with mono sub-amounts (uplift)', () => {
+    // Design uplift Slice 3: Fold | Check/Call | Bet/Raise | All-In as
+    // equal segments; amounts live in a .num sub-element under the label.
+    const { container } = renderWithContainer(startedHand({ playerCount: 3 }), 0)
+    const row = container.querySelector('.action-panel__row')!
+    const buttons = [...row.querySelectorAll(':scope > button')]
+    expect(buttons.map((b) => b.textContent?.trim().split(/\s+/)[0])).toEqual([
+      'Fold',
+      'Call',
+      'Raise',
+      'All-In',
+    ])
+    // Call and Raise carry their amounts as mono sub-elements.
+    expect(buttons[1]!.querySelector('.num')?.textContent).toBe('100')
+    expect(buttons[2]!.querySelector('.num')?.textContent).toBe('150')
+  })
+
+  it('keeps claret off resting buttons — destructive color is confirm-only (uplift)', () => {
+    // Gap analysis rejected the mock's red-at-rest: Fold/All-In rest
+    // neutral; claret appears only inside the confirm sheet.
+    const { container } = renderWithContainer(startedHand({ playerCount: 3 }), 0)
+    const row = container.querySelector('.action-panel__row')!
+    expect(row.querySelector('.button--danger')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Fold' }))
+    expect(document.querySelector('.confirm-sheet .button--danger')).toBeTruthy()
   })
 })
 

@@ -42,6 +42,16 @@ describe('SeatList', () => {
     expect(onClaim).toHaveBeenCalledWith(2) // released seat comes first
   })
 
+  it('numbers each seat with a chip-circle marker (design uplift)', () => {
+    const { container } = render(
+      <SeatList snapshot={snapshotWithSeats()} onClaim={() => {}} />,
+    )
+    const numbers = [...container.querySelectorAll('.seat-list__no')]
+    expect(numbers).toHaveLength(10)
+    expect(numbers[0]!.textContent).toBe('1')
+    expect(numbers[9]!.textContent).toBe('10')
+  })
+
   it('never renders PIN or password surfaces', () => {
     const { container } = render(
       <SeatList snapshot={snapshotWithSeats()} onClaim={() => {}} />,

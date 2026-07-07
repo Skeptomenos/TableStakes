@@ -2,6 +2,7 @@ import { io, type Socket } from 'socket.io-client'
 
 import type { GameSnapshot } from '../shared/schema/snapshot'
 import { logClient, setClientLogContext } from './logging'
+import { uuid } from './uuid'
 
 // The server snapshot is canonical; the client renders it and submits
 // commands. A command counts as committed only after the server ack
@@ -66,7 +67,7 @@ export function connectToGame(
       })
     },
     sendCommand(command: unknown): Promise<void> {
-      const id = crypto.randomUUID()
+      const id = uuid()
       return new Promise((resolve, reject) => {
         const onAck = (payload: { id: string }) => {
           if (payload.id !== id) return

@@ -25,7 +25,14 @@ export function ShareCard({ code, port, addresses }: ShareCardProps) {
         className="share-card__qr"
         role="img"
         aria-label={`QR code for ${url}`}
-        dangerouslySetInnerHTML={{ __html: renderSVG(url) }}
+        dangerouslySetInnerHTML={{
+          __html: renderSVG(url, {
+            // Ivory card stock, felt-dark ink — the QR is a physical
+            // object in the Felt & Ledger world, not a white sticker.
+            whiteColor: '#e9e5d9',
+            blackColor: '#0e1210',
+          }),
+        }}
       />
       <p className="share-card__url">{url}</p>
       <p className="share-card__code" aria-label="Game code">

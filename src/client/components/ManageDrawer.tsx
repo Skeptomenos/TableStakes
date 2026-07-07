@@ -253,7 +253,7 @@ export function ManageDrawer({
             ) : null}
             <button
               type="button"
-              className="button button--danger manage-drawer__action"
+              className="button manage-drawer__action"
               onClick={() => setConfirming({ kind: 'reset' })}
             >
               Reset Game

@@ -12,7 +12,7 @@ export interface ActionPanelProps {
 type Confirmation = 'fold' | 'call-all-in' | 'all-in' | null
 
 /**
- * The sparse Deep Stack Logic action panel (SPEC.md Phone Action Panel):
+ * The sparse Felt & Ledger action panel (SPEC.md Phone Action Panel):
  * blinds/min context, one slider with minus/plus, a tappable exact amount,
  * and the action row. No quick-chip presets. Check/Call/Bet/Raise commit
  * directly; Fold and every all-in variant confirm first. Amounts are
@@ -153,10 +153,13 @@ export function ActionPanel({ snapshot, mySeat, onCommand }: ActionPanelProps) {
         </p>
       ) : null}
 
+      {/* Four equal segments; amounts are mono sub-lines. Claret is
+          confirm-sheet-only — resting buttons stay neutral, emerald marks
+          the advancing action (design uplift Slice 3). */}
       <div className="action-panel__row">
         <button
           type="button"
-          className="button button--danger"
+          className="button action-panel__action"
           disabled={!myTurn}
           onClick={() => setConfirming('fold')}
         >
@@ -165,7 +168,7 @@ export function ActionPanel({ snapshot, mySeat, onCommand }: ActionPanelProps) {
         {owed <= 0 ? (
           <button
             type="button"
-            className="button button--primary"
+            className="button button--primary action-panel__action"
             disabled={!myTurn}
             onClick={() => onCommand({ _tag: 'check' })}
           >
@@ -174,33 +177,34 @@ export function ActionPanel({ snapshot, mySeat, onCommand }: ActionPanelProps) {
         ) : shortCall ? (
           <button
             type="button"
-            className="button button--danger"
+            className="button button--primary action-panel__action"
             disabled={!myTurn}
             onClick={() => setConfirming('call-all-in')}
           >
-            Call All-in {me?.stack}
+            Call All-in <span className="num">{me?.stack}</span>
           </button>
         ) : (
           <button
             type="button"
-            className="button button--primary"
+            className="button button--primary action-panel__action"
             disabled={!myTurn}
             onClick={() => onCommand({ _tag: 'call' })}
           >
-            Call {owed}
+            Call <span className="num">{owed}</span>
           </button>
         )}
         <button
           type="button"
-          className="button"
+          className="button action-panel__action"
           disabled={!myTurn || strictBlocked || max === 0}
           onClick={submitAggression}
         >
-          {aggressionIsAllIn ? 'All-In' : isOpeningBet ? 'Bet' : 'Raise'} {amount}
+          {aggressionIsAllIn ? 'All-In' : isOpeningBet ? 'Bet' : 'Raise'}{' '}
+          <span className="num">{amount}</span>
         </button>
         <button
           type="button"
-          className="button button--danger"
+          className="button action-panel__action"
           disabled={!myTurn}
           onClick={() => setConfirming('all-in')}
         >
