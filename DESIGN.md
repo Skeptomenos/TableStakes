@@ -95,8 +95,14 @@ spacing:
 
 # Poker Chip Counter Design
 
-Status: Draft implementation contract
+Status: Implemented MVP contract — a LOCKED visual uplift supersedes this file as the design target
 Last reviewed from Stitch: 2026-07-01
+
+> **Design uplift (locked 2026-07-07):** a visual v2 — "Felt & Ledger" — has been designed
+> and approved: a felt-black palette, monospaced ledger numerals, and a stadium-shaped table
+> rail with fixed-size player cards centered on the rail at equal spacing. This file continues
+> to describe what is IMPLEMENTED today and will be rewritten when the uplift lands. Until
+> then, treat the visual details below as current-but-superseded for any new styling work.
 
 ## Stitch Source
 
