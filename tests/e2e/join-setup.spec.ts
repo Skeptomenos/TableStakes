@@ -39,11 +39,16 @@ test('host shares a game and a player joins, claims a seat, and completes setup'
 
   // Player: second context, phone portrait, joins by TYPING the code on
   // the home screen (DESIGN.md manual game-code input, Slice 12) — the
-  // same end state as opening /g/<code> directly.
+  // same end state as opening /g/<code> directly. Typed keystroke-by-
+  // keystroke THROUGH the sanitizer with polluted input, so the E2E
+  // exercises per-keystroke stripping, not just one fill() event
+  // (post-verification F8).
   const playerContext = await browser.newContext()
   const player = await newPortraitPage(playerContext)
   await player.goto('/')
-  await player.getByLabel(/game code/i).fill(code)
+  const codeInput = player.getByLabel(/game code/i)
+  await codeInput.pressSequentially(`x${code.slice(0, 2)}-${code.slice(2)}z9`)
+  await expect(codeInput).toHaveValue(code)
   await player.getByRole('button', { name: 'Join', exact: true }).click()
   await player.waitForURL(`**/g/${code}`)
   await expect(player.getByText('Join Local Game')).toBeVisible()

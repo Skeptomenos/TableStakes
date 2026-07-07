@@ -57,6 +57,13 @@ export function createGameWithUniqueCode(
       // SQLite error code first (better-sqlite3 sets SQLITE_CONSTRAINT_*),
       // then the constraint name — message-only matching could swallow
       // unrelated constraint failures (Slice 12 hardening).
+      // ACCEPTED dependency (post-verification F9 decision): the constraint
+      // name comes from better-sqlite3's error MESSAGE, the only place the
+      // driver exposes it. If a driver upgrade changes the format, real
+      // collisions start THROWING (fail-loud, never fail-silent) and two
+      // tests break immediately: 'regenerates on collision' and 'does not
+      // swallow non-collision constraint failures as collisions'
+      // (tests/integration/persistence-restore.test.ts).
       const sqliteCode = (error as { code?: unknown }).code
       if (
         error instanceof Error &&

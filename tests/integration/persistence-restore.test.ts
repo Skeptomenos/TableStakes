@@ -100,6 +100,16 @@ describe('migrations', () => {
     expect(rerun.to).toBe(version)
     expect(db.pragma('user_version', { simple: true })).toBe(version)
   })
+
+  it('refuses to open a database from a newer build (post-verification F4)', () => {
+    // A downgrade (user_version beyond this build's migration count) must
+    // fail loudly instead of silently returning from > to — an older
+    // build cannot know what a newer schema contains.
+    db.pragma('user_version = 99')
+    expect(() => migrate(db)).toThrow(/newer/i)
+    // The version is untouched by the refused run.
+    expect(db.pragma('user_version', { simple: true })).toBe(99)
+  })
 })
 
 describe('game creation and code uniqueness', () => {

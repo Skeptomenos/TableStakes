@@ -89,7 +89,29 @@ function describeSingleEvent(event: GameEvent): string {
       return 'Reset game'
     case 'blinds-updated':
       return 'Change blinds'
+    // Settings and setup family (post-verification F1: these are all
+    // UI-reachable single-event commands from the manage drawer / setup).
+    case 'strict-mode-updated':
+      return event.enabled ? 'Strict mode on' : 'Strict mode off'
+    case 'raise-rule-updated':
+      return `Raise rule: ${event.rule}`
+    case 'amount-step-updated':
+      return 'Change amount step'
+    case 'dealer-set':
+      return 'Set dealer'
+    case 'game-configured':
+      return 'Game setup'
+    case 'blind-posted':
+      return 'Post blind'
+    case 'game-created':
+      return 'Create game'
     default:
+      // Completeness (sweep, post-verification F1): every event the
+      // reducers can emit as a SINGLE-event transaction has a case above;
+      // pot-created and uncalled-bet-returned only occur inside bundles
+      // (street-advance-to-showdown, uncontested award) that the bundle
+      // rules in describeEvents label first. Only tags outside the union
+      // reach this fallback.
       return event._tag
   }
 }

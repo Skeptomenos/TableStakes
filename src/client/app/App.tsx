@@ -15,7 +15,10 @@ export function App() {
         <h1 className="app-shell__title">Poker Chip Counter</h1>
       </header>
       <section className="app-shell__body">
-        {gameCode ? <GameRoute code={gameCode} /> : <HomeRoute />}
+        {/* key: a code change must REMOUNT the route — snapshot/seat/profile
+            state from one game may never bleed into another, and the old
+            socket must drop (post-verification F7). */}
+        {gameCode ? <GameRoute key={gameCode} code={gameCode} /> : <HomeRoute />}
       </section>
     </main>
   )

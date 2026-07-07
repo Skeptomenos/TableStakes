@@ -152,6 +152,20 @@ describe('soft vs strict below-minimum entry', () => {
     expect(onCommand).toHaveBeenCalledWith({ _tag: 'go-all-in' })
   })
 
+  it('slider collapses to the reachable total when the minimum exceeds it (F2)', () => {
+    // Same capped-short-stack state: minRaiseTo 150 > reach 120. The
+    // thumb must sit on the one committable amount (120), not render
+    // pinned at an uncommittable min of 150 (post-verification F2).
+    const s = startedHand({ playerCount: 3, strictMode: true, stacks: { 0: 120 } })
+    renderPanel(s, 0)
+
+    const slider = screen.getByRole('slider') as HTMLInputElement
+    expect(slider.min).toBe('120')
+    expect(slider.max).toBe('120')
+    expect(slider.value).toBe('120')
+    expect(screen.getByTestId('amount-display').textContent).toContain('120')
+  })
+
   it('strict mode blocks a below-minimum exact entry', () => {
     const onCommand = renderPanel(
       startedHand({ playerCount: 3, strictMode: true }),

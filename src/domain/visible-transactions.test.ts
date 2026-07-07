@@ -50,9 +50,63 @@ describe('describeEvents', () => {
     ).toBe('Claim seat')
   })
 
-  it('falls back to the raw tag only for unknown events', () => {
+  it('labels settings and setup single events (F1: all UI-reachable)', () => {
+    expect(
+      describeEvents([seat({ _tag: 'strict-mode-updated', enabled: true })]),
+    ).toBe('Strict mode on')
+    expect(
+      describeEvents([seat({ _tag: 'strict-mode-updated', enabled: false })]),
+    ).toBe('Strict mode off')
+    expect(
+      describeEvents([seat({ _tag: 'raise-rule-updated', rule: 'double' })]),
+    ).toBe('Raise rule: double')
+    expect(
+      describeEvents([
+        seat({ _tag: 'amount-step-updated', step: { kind: 'follow-big-blind' } }),
+      ]),
+    ).toBe('Change amount step')
+    expect(describeEvents([seat({ _tag: 'dealer-set', seatIndex: 3 })])).toBe(
+      'Set dealer',
+    )
     expect(describeEvents([seat({ _tag: 'game-configured', settings: {} })])).toBe(
-      'game-configured',
+      'Game setup',
+    )
+    expect(
+      describeEvents([
+        seat({ _tag: 'blind-posted', seatIndex: 1, kind: 'small', amount: 50 }),
+      ]),
+    ).toBe('Post blind')
+    expect(
+      describeEvents([seat({ _tag: 'game-created', code: '11111', creatorProfileId: 'p' })]),
+    ).toBe('Create game')
+  })
+
+  it('bundle labels win over single-event cases for showdown pot bundles', () => {
+    // pot-created / uncalled-bet-returned never occur alone: the showdown
+    // street advance bundles them under Next street, the uncontested win
+    // under the pot-award labels (completeness sweep, F1).
+    expect(
+      describeEvents([
+        seat({ _tag: 'street-advanced', street: 'showdown' }),
+        seat({ _tag: 'uncalled-bet-returned', seatIndex: 0, amount: 60 }),
+        seat({ _tag: 'pot-created', potId: 'p1', label: 'Main Pot' }),
+      ]),
+    ).toBe('Next street')
+    expect(
+      describeEvents([
+        seat({ _tag: 'pot-created', potId: 'p1', label: 'Main Pot' }),
+        seat({ _tag: 'pot-awarded', potId: 'p1', winnerId: 'w', amount: 100 }),
+        seat({ _tag: 'hand-settled' }),
+      ]),
+    ).toBe('Award pots')
+  })
+
+  it('falls back to the raw tag for events outside the union', () => {
+    // A genuinely unknown tag (not in the GameEvent union): the fallback
+    // must surface it verbatim rather than invent a label (F5: the old
+    // version of this test used game-configured, a KNOWN event).
+    expect(describeEvents([seat({ _tag: 'not-a-real-event' })])).toBe(
+      'not-a-real-event',
     )
   })
 })

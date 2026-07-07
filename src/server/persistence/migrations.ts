@@ -69,6 +69,14 @@ const MIGRATIONS: string[] = [
 
 export function migrate(db: AppDatabase): { from: number; to: number } {
   const applied = db.pragma('user_version', { simple: true }) as number
+  // Downgrade guard (post-verification F4): a database stamped by a newer
+  // build has schema this build knows nothing about — fail loudly instead
+  // of silently returning from > to.
+  if (applied > MIGRATIONS.length) {
+    throw new Error(
+      `database schema v${applied} is newer than this build (v${MIGRATIONS.length}) — refusing to run; upgrade the app or restore the older database`,
+    )
+  }
   const run = db.transaction(() => {
     for (let version = applied; version < MIGRATIONS.length; version++) {
       db.exec(MIGRATIONS[version]!)

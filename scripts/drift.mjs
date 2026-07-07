@@ -105,14 +105,20 @@ if (!pkg.scripts?.['logs:report']) {
 // 7. Every command in the GameCommand union is dispatched by the game
 // reducer. A schema-only command silently rejects at runtime with
 // "command not implemented yet" — exactly the drift this catches.
-const commandSchema = read('src/shared/schema/commands.ts')
+// Comments are stripped first so a commented-out `case 'x':` cannot
+// satisfy the check (post-verification F3).
+function stripComments(source) {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
+}
+
+const commandSchema = stripComments(read('src/shared/schema/commands.ts'))
 const commandTags = [
   ...commandSchema.matchAll(/Schema\.TaggedStruct\('([a-z-]+)'/g),
 ].map((m) => m[1])
 if (commandTags.length === 0) {
   failures.push('no TaggedStruct commands found in src/shared/schema/commands.ts')
 }
-const reducer = read('src/domain/reducers/game-reducer.ts')
+const reducer = stripComments(read('src/domain/reducers/game-reducer.ts'))
 for (const tag of commandTags) {
   if (!reducer.includes(`case '${tag}':`)) {
     failures.push(

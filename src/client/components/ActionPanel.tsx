@@ -55,6 +55,12 @@ export function ActionPanel({ snapshot, mySeat, onCommand }: ActionPanelProps) {
   }, [min, max, myTurn, hand?.street])
 
   const clampHigh = (value: number) => Math.min(value, max)
+  // Slider bounds: when a capped short stack's minimum exceeds their reach
+  // (min > max), collapse the visual range to the single committable
+  // amount — the thumb must never sit on a value the player cannot commit
+  // (post-verification F2). The amount state itself is already clamped.
+  const sliderMin = Math.min(min, max)
+  const sliderMax = Math.max(sliderMin, max)
   const belowMin = amount < min
   const isOpeningBet = (hand?.currentBet ?? 0) === 0
   const aggressionIsAllIn = amount >= max && max > 0
@@ -95,10 +101,10 @@ export function ActionPanel({ snapshot, mySeat, onCommand }: ActionPanelProps) {
         <input
           type="range"
           aria-label="Amount"
-          min={min}
-          max={Math.max(min, max)}
+          min={sliderMin}
+          max={sliderMax}
           step={step}
-          value={Math.max(amount, min)}
+          value={Math.max(amount, sliderMin)}
           disabled={!myTurn}
           onChange={(e) => setAmount(clampHigh(Number(e.target.value)))}
         />

@@ -71,9 +71,12 @@ export function CashOutScreen({
     return () => {
       cancelled = true
     }
-    // Depends on the cursor only: parents recreate the loadSettlement
-    // closure every render, and a fetched settlement has fresh object
-    // identity, so depending on either would refetch in a loop.
+    // Depends on the cursor only. Depending on loadSettlement (recreated
+    // by the parent every render) would refetch once per broadcast/render
+    // — harmless but pointless; the cursor is the precise signal that a
+    // command was accepted, which is the only time the settlement can
+    // change. Each effect run captures the current render's closure, so
+    // nothing here goes stale (post-verification F6: comment corrected).
   }, [eventCursor])
 
   const validTransfers = transfers.every(
