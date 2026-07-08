@@ -4,19 +4,21 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { interruptSeat } from '../../domain/seats'
 import { mustOk, played, startedHand } from '../../domain/testing'
-import { makeBetweenHandsSnapshot } from '../../domain/state/fixtures'
+import { makeBetweenHandsSnapshot, makeTestSettings } from '../../domain/state/fixtures'
 import type { GameSnapshot } from '../../shared/schema/snapshot'
 import { ManageDrawer, type UndoPreview } from './ManageDrawer'
 
 afterEach(cleanup)
 
 const nothingToUndo = () => Promise.resolve(null)
+const noAddresses = () => Promise.resolve({ addresses: [], localhostOnly: true })
 
 function renderDrawer(
   snapshot: GameSnapshot,
   options: {
     mySeat?: number | null
     preview?: UndoPreview | null
+    serverInfo?: { addresses: string[]; localhostOnly: boolean }
   } = {},
 ) {
   const onCommand = vi.fn()
@@ -31,6 +33,9 @@ function renderDrawer(
         options.preview === undefined
           ? nothingToUndo
           : () => Promise.resolve(options.preview ?? null)
+      }
+      loadServerInfo={
+        options.serverInfo ? () => Promise.resolve(options.serverInfo!) : noAddresses
       }
     />,
   )
@@ -196,12 +201,105 @@ describe('sit-out and return', () => {
   })
 })
 
+// ADR 0002, Slice 4: rebuys offer Full/Half/Custom quick-picks and cannot
+// exceed the table default client-side either — the same cap the domain
+// enforces (Slice 2), surfaced before the player ever submits.
 describe('rebuy', () => {
-  it('collects player and amounts, then confirms a record-rebuy', () => {
+  it('Full quick-pick selects exactly the table default', () => {
     const s = makeBetweenHandsSnapshot({ playerCount: 3 })
     const { onCommand } = renderDrawer(s, { mySeat: 0 })
 
     fireEvent.click(screen.getByRole('button', { name: /rebuy/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Full' }))
+    fireEvent.click(screen.getByRole('button', { name: /review rebuy/i }))
+    const sheet = screen.getByRole('dialog', { name: /rebuy for player 1/i })
+    expect(sheet.textContent).toContain('1000 chips')
+    fireEvent.click(screen.getByRole('button', { name: /confirm rebuy/i }))
+
+    expect(onCommand).toHaveBeenCalledWith({
+      _tag: 'record-rebuy',
+      playerId: s.players[0]!.id,
+      money: { currency: 'EUR', cents: 1000 },
+      chips: 1000,
+    })
+  })
+
+  it('Half quick-pick selects half the default, rounded to the chip ratio', () => {
+    const s = makeBetweenHandsSnapshot({ playerCount: 3 })
+    renderDrawer(s, { mySeat: 0 })
+
+    fireEvent.click(screen.getByRole('button', { name: /rebuy/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Half' }))
+    expect(screen.getByText('500 chips')).toBeTruthy()
+    // Money is derived from the chip ratio, never typed directly.
+    expect(screen.getByText(/5\.00 EUR/)).toBeTruthy()
+  })
+
+  it('Custom amount is capped at the table default — cannot type above it', () => {
+    const s = makeBetweenHandsSnapshot({ playerCount: 3 })
+    renderDrawer(s, { mySeat: 0 })
+
+    fireEvent.click(screen.getByRole('button', { name: /rebuy/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Custom' }))
+    fireEvent.change(screen.getByLabelText(/chips/i), { target: { value: '5000' } })
+
+    // Clamped, not merely disabled: the field itself never holds an
+    // above-cap value the player could still submit.
+    const chipsInput = screen.getByLabelText(/chips/i) as HTMLInputElement
+    expect(Number(chipsInput.value)).toBeLessThanOrEqual(1000)
+    const reviewButton = screen.getByRole('button', {
+      name: /review rebuy/i,
+    }) as HTMLButtonElement
+    expect(reviewButton.disabled).toBe(false)
+  })
+
+  it('sends the TABLE currency in the rebuy command, not a hardcoded EUR', () => {
+    // FINAL-verification finding: the confirm sheet hardcoded
+    // `currency: 'EUR'` while the console makes non-EUR tables reachable —
+    // the domain's currency check would reject every rebuy on such tables.
+    const s = makeBetweenHandsSnapshot({
+      playerCount: 3,
+      settings: makeTestSettings({ currency: 'GBP' }),
+    })
+    const { onCommand } = renderDrawer(s, { mySeat: 0 })
+
+    fireEvent.click(screen.getByRole('button', { name: /rebuy/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Full' }))
+    fireEvent.click(screen.getByRole('button', { name: /review rebuy/i }))
+    const sheet = screen.getByRole('dialog', { name: /rebuy for player 1/i })
+    expect(sheet.textContent).toContain('GBP')
+    expect(sheet.textContent).not.toContain('EUR')
+    fireEvent.click(screen.getByRole('button', { name: /confirm rebuy/i }))
+
+    expect(onCommand).toHaveBeenCalledWith({
+      _tag: 'record-rebuy',
+      playerId: s.players[0]!.id,
+      money: { currency: 'GBP', cents: 1000 },
+      chips: 1000,
+    })
+  })
+
+  it('disables Review Rebuy with a reason when the amount is invalid', () => {
+    const s = makeBetweenHandsSnapshot({ playerCount: 3 })
+    renderDrawer(s, { mySeat: 0 })
+
+    fireEvent.click(screen.getByRole('button', { name: /rebuy/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Custom' }))
+    fireEvent.change(screen.getByLabelText(/chips/i), { target: { value: '0' } })
+
+    const reviewButton = screen.getByRole('button', {
+      name: /review rebuy/i,
+    }) as HTMLButtonElement
+    expect(reviewButton.disabled).toBe(true)
+    expect(screen.getByText(/amount must be/i)).toBeTruthy()
+  })
+
+  it('collects player and confirms a record-rebuy at the selected amount', () => {
+    const s = makeBetweenHandsSnapshot({ playerCount: 3 })
+    const { onCommand } = renderDrawer(s, { mySeat: 0 })
+
+    fireEvent.click(screen.getByRole('button', { name: /rebuy/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Custom' }))
     fireEvent.change(screen.getByLabelText(/chips/i), { target: { value: '500' } })
     fireEvent.click(screen.getByRole('button', { name: /review rebuy/i }))
     // Confirmation copy must state the player and amount (SPEC.md).
@@ -215,6 +313,30 @@ describe('rebuy', () => {
       money: { currency: 'EUR', cents: 500 },
       chips: 500,
     })
+  })
+})
+
+// ADR 0002, Slice 4: a late arrival can be onboarded from any phone
+// mid-game — the share card must be reachable from the drawer, not just
+// during setup.
+describe('share', () => {
+  it('the menu offers Share this table', () => {
+    renderDrawer(startedHand({ playerCount: 3 }))
+    expect(
+      screen.getByRole('button', { name: /share this table/i }),
+    ).toBeTruthy()
+  })
+
+  it('opens a view rendering the ShareCard for the current code, even mid-hand', async () => {
+    const s = startedHand({ playerCount: 3 })
+    renderDrawer(s)
+
+    fireEvent.click(screen.getByRole('button', { name: /share this table/i }))
+    await waitFor(() => screen.getByLabelText(/qr code/i))
+    expect(screen.getByText(s.game.code)).toBeTruthy()
+    // Both the drawer header and the ShareCard itself say "Share this
+    // table" once this view is open — two matches is the expected shape.
+    expect(screen.getAllByText('Share this table')).toHaveLength(2)
   })
 })
 

@@ -221,25 +221,52 @@ export class GameService {
     return { gameId: runtime.gameId, code: runtime.code, status: runtime.snapshot.game.status }
   }
 
+  /**
+   * Active tables for the player landing's tap-to-join list (SPEC.md,
+   * ADR 0002): a second device must find an existing table instead of
+   * seeing ten empty seats at a table of its own. A finished game's
+   * runtime entry stays in `this.games` for the rest of the process
+   * (archived to SQLite, but never evicted from the in-memory map — see
+   * `persistAndBroadcast`), so `finished` is filtered here explicitly.
+   * Seated count comes from claimed seats in the live snapshot, oldest
+   * first.
+   */
+  listGames(): { code: string; status: string; seatedCount: number; createdAt: number }[] {
+    return [...this.games.values()]
+      .filter((runtime) => runtime.snapshot.game.status !== 'finished')
+      .map((runtime) => ({
+        code: runtime.code,
+        status: runtime.snapshot.game.status,
+        seatedCount: runtime.snapshot.players.length,
+        createdAt: runtime.snapshot.game.createdAt,
+      }))
+      .sort((a, b) => a.createdAt - b.createdAt)
+  }
+
   createGame(options: { creatorName?: string; creatorProfileId?: string }): {
     gameId: string
     code: string
-    creatorProfileId: string
+    creatorProfileId: string | null
   } {
-    let creator: { profileId: string }
+    // No profile given at all (ADR 0002): the console creates a table
+    // without selecting or creating one — the audit records console
+    // origin (null) instead of a creator.
+    let creator: { profileId: string } | null
     if (options.creatorProfileId) {
       const existing = getProfile(this.deps.db, options.creatorProfileId)
       if (!existing) {
         throw new Error('unknown creator profile')
       }
       creator = existing
+    } else if (options.creatorName) {
+      creator = this.createProfile(options.creatorName)
     } else {
-      creator = this.createProfile(options.creatorName ?? 'Host')
+      creator = null
     }
     const now = this.deps.clock.now()
     const row = createGameWithUniqueCode(this.deps.db, {
       gameId: this.deps.ids.nextId('game'),
-      creatorProfileId: creator.profileId,
+      creatorProfileId: creator?.profileId ?? null,
       generateCode: () => this.deps.codes.nextCode(),
       now,
     })
@@ -259,7 +286,7 @@ export class GameService {
           raiseRule: 'any',
           amountStep: { kind: 'follow-small-blind' },
         },
-        creatorProfileId: creator.profileId,
+        creatorProfileId: creator?.profileId ?? null,
         dealerSeat: null,
         pendingSettings: null,
         lastHandNumber: 0,
@@ -293,7 +320,11 @@ export class GameService {
       warnings: [],
       ok: true,
     })
-    return { gameId: row.gameId, code: row.code, creatorProfileId: creator.profileId }
+    return {
+      gameId: row.gameId,
+      code: row.code,
+      creatorProfileId: creator?.profileId ?? null,
+    }
   }
 
   getSnapshot(gameId: string): GameSnapshot | null {

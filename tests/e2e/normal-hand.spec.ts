@@ -3,20 +3,49 @@ import { expect, test, type Browser, type Page } from '@playwright/test'
 // Slice 8 browser evidence: three phone-portrait clients play one complete
 // normal hand — blinds, calls and checks, manual street confirmations, a
 // river bet folded out to an uncontested auto-award, and next-hand
-// advancement with the dealer button moving.
+// advancement with the dealer button moving. Slice 3 (ADR 0002) changed
+// only the setup preamble: the console creates+configures the table and
+// phones confirm the fixed default buy-in instead of the old bundled
+// host-profile-tap + SetupForm flow. Every in-hand assertion below is
+// byte-identical to before the surface split — this spec is the
+// regression net proving the choreography flip is behavior-neutral.
 
+const DESKTOP = { width: 1280, height: 800 }
 const PORTRAIT = { width: 390, height: 844 }
+
+async function newDesktopPage(browser: Browser): Promise<Page> {
+  const context = await browser.newContext({ viewport: DESKTOP })
+  return context.newPage()
+}
 
 async function newPhone(browser: Browser): Promise<Page> {
   const context = await browser.newContext({ viewport: PORTRAIT })
   return context.newPage()
 }
 
-async function joinAndClaim(page: Page, code: string, name: string) {
+async function joinClaimAndConfirm(page: Page, code: string, name: string) {
   await page.goto(`/g/${code}`)
   await page.getByPlaceholder('Name').fill(name)
   await page.getByRole('button', { name: 'Create New Profile' }).click()
   await page.getByRole('button', { name: 'Claim Seat' }).first().click()
+  await page
+    .getByRole('button', { name: 'Buy in for 10 EUR → 1000 chips' })
+    .click()
+}
+
+// e2e specs share one long-lived server across the whole suite run, so an
+// older active table may already be auto-selected on /console mount
+// (correct product behavior). Read the NEW table's code from the actual
+// POST /api/games response, never by scraping the DOM right after the
+// click.
+async function createTableAndGetCode(console_: Page): Promise<string> {
+  const [response] = await Promise.all([
+    console_.waitForResponse(
+      (res) => res.url().endsWith('/api/games') && res.request().method() === 'POST',
+    ),
+    console_.getByRole('button', { name: 'Create Table' }).click(),
+  ])
+  return (await response.json()).code as string
 }
 
 test('three phones play a normal hand through auto-award and next hand', async ({
@@ -24,27 +53,29 @@ test('three phones play a normal hand through auto-award and next hand', async (
 }) => {
   test.setTimeout(120_000)
 
-  // Host creates the game and claims seat 1.
+  // Console creates and configures the table (ADR 0002): settings only,
+  // SPEC.md example economy defaults.
+  const console_ = await newDesktopPage(browser)
+  await console_.goto('/console')
+  const code = await createTableAndGetCode(console_)
+  await expect(
+    console_.locator('.share-card__code', { hasText: code }),
+  ).toBeVisible()
+
+  // Three phones join, claim seats, and confirm the fixed default buy-in.
   const host = await newPhone(browser)
-  await host.goto('/')
-  await host.getByPlaceholder('Name').fill('Hosta')
-  await host.getByRole('button', { name: 'Create New Profile' }).click()
-  await host.waitForURL(/\/g\/\d{5}$/)
-  const code = host.url().match(/\/g\/(\d{5})$/)![1]!
-  await host.getByRole('button', { name: 'Claim Seat' }).first().click()
-
-  // Two more phones join and claim the next seats.
+  await joinClaimAndConfirm(host, code, 'Hosta')
   const anna = await newPhone(browser)
-  await joinAndClaim(anna, code, 'Anna')
+  await joinClaimAndConfirm(anna, code, 'Anna')
   const ben = await newPhone(browser)
-  await joinAndClaim(ben, code, 'Ben')
+  await joinClaimAndConfirm(ben, code, 'Ben')
 
-  // Host completes setup: dealer = Hosta (seat 1), defaults 10 EUR = 1000.
-  await expect(host.getByText('First-hand setup')).toBeVisible()
-  await host.getByRole('radio').first().check()
-  await host.getByRole('button', { name: 'Start Game' }).click()
-  await expect(host.getByText('Table is set')).toBeVisible()
-  await host.getByRole('button', { name: 'Start Hand' }).click()
+  // Console picks the first dealer (Hosta, seat 1, first to claim+confirm)
+  // and starts the hand once 2+ players have bought in (console-primary,
+  // ADR 0002).
+  await expect(console_.getByText('First dealer')).toBeVisible()
+  await console_.getByRole('radio').first().check()
+  await console_.getByRole('button', { name: 'Start Hand' }).click()
 
   // Live table appears on every phone with blinds posted: dealer Hosta,
   // SB Anna, BB Ben; Hosta acts first pre-flop. Pucks are amount-less

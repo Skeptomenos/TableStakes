@@ -29,3 +29,13 @@ test('game URLs serve the app shell', async ({ page }) => {
     page.getByRole('heading', { name: 'Poker Chip Counter' }),
   ).toBeVisible()
 })
+
+// ADR 0002 Slice 3 probe: the table console is a third top-level route
+// alongside / and /g/<code> — the SPA fallback in src/server/http.ts must
+// serve the app shell for it too.
+test('/console serves the app shell', async ({ page }) => {
+  await page.goto('/console')
+  await expect(
+    page.getByRole('heading', { name: 'Poker Chip Counter' }),
+  ).toBeVisible()
+})

@@ -33,16 +33,31 @@ export async function createProfile(name: string): Promise<ProfileInfo> {
   )
 }
 
+// Console-created tables need no profile at all (ADR 0002): the audit
+// records console origin instead of a creator.
 export async function createGame(
-  creatorProfileId: string,
+  creatorProfileId?: string,
 ): Promise<{ gameId: string; code: string }> {
   return json(
     await fetch('/api/games', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ creatorProfileId }),
+      body: JSON.stringify(creatorProfileId ? { creatorProfileId } : {}),
     }),
   )
+}
+
+export interface ActiveGameInfo {
+  code: string
+  status: string
+  seatedCount: number
+  createdAt: number
+}
+
+/** Active (non-finished) tables for the player landing's tap-to-join list. */
+export async function listGames(): Promise<ActiveGameInfo[]> {
+  const data = await json<{ games: ActiveGameInfo[] }>(await fetch('/api/games'))
+  return data.games
 }
 
 export async function getServerInfo(): Promise<ServerInfo> {

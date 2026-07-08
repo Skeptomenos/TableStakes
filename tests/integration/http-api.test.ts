@@ -96,6 +96,59 @@ describe('HTTP API', () => {
     expect(gameRes.status).toBe(400)
   })
 
+  // Slice 1 probe (ADR 0002): the console creates a table with no profile
+  // at all — the audit records console origin instead (SPEC.md "Tables are
+  // created from the console").
+  it('creates a game with no profile at all (console origin)', async () => {
+    const gameRes = await fetch(`${base}/api/games`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    expect(gameRes.status).toBe(201)
+    const game = await gameRes.json()
+    expect(game.code).toBe('48317')
+
+    const snapshot = server.service.getSnapshot(game.gameId)!
+    expect(snapshot.game.creatorProfileId).toBeNull()
+  })
+
+  // Slice 1 probe (ADR 0002): the player landing lists active tables with
+  // seated counts so a second device finds the existing table instead of
+  // seeing ten empty seats at a table of its own.
+  it('lists active tables with seated counts for the player landing', async () => {
+    const profileRes = await fetch(`${base}/api/profiles`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Alex' }),
+    })
+    const profile = await profileRes.json()
+    const gameRes = await fetch(`${base}/api/games`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    const game = await gameRes.json()
+    server.service.join({ gameCode: game.code, sessionId: 's1', socketId: 'k1' })
+    server.service.processCommand(
+      { gameCode: game.code, sessionId: 's1', socketId: 'k1' },
+      {
+        id: 'c1',
+        command: { _tag: 'claim-seat', seatIndex: 0, profileId: profile.profileId },
+      },
+    )
+
+    const listRes = await fetch(`${base}/api/games`)
+    expect(listRes.status).toBe(200)
+    const { games } = await listRes.json()
+    expect(Array.isArray(games)).toBe(true)
+    const listed = games.find((g: { code: string }) => g.code === game.code)
+    expect(listed).toBeTruthy()
+    expect(listed.status).toBe('setup')
+    expect(listed.seatedCount).toBe(1)
+    expect(typeof listed.createdAt).toBe('number')
+  })
+
   it('reports LAN reachability info for the share screen', async () => {
     const res = await fetch(`${base}/api/server-info`)
     expect(res.status).toBe(200)

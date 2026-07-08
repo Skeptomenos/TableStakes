@@ -1,6 +1,6 @@
 # Contributing to TableStakes
 
-TableStakes (the app in `apps/poker-chip-counter`) is a local-first web app for phone-based chip accounting at home poker games: one Node.js server on the host laptop, phone clients over the LAN, no accounts, no cloud. The user-facing story is in [README.md](README.md); this page is the developer's map.
+TableStakes (the app in `apps/poker-chip-counter`) is a local-first web app for chip accounting at home poker games: one Node.js server on the host laptop serving a table console (`/console`) plus phone player clients (`/g/<code>`) over the LAN, no accounts, no cloud. The user-facing story is in [README.md](README.md); this page is the developer's map.
 
 ## Stack
 
@@ -11,7 +11,7 @@ src/
   shared/   schemas (commands, events, snapshot), chip/money helpers, routes
   domain/   pure reducers: hands, betting, side pots, settlement, cash-out, undo
   server/   command pipeline, Socket.IO sessions, SQLite persistence, logging
-  client/   React phone UI: join, live table, action panel, settlement, cash-out
+  client/   React UI: table console, player landing, join, live table, action panel, settlement, cash-out
 tests/
   integration/  real SQLite temp files, service-level pipeline tests
   e2e/          Playwright phone-portrait browser flows

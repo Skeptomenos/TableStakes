@@ -275,6 +275,41 @@ body {
   gap: 8px;
 }
 
+/* Player landing's tap-to-join active-tables list (ADR 0002): one row per
+   open table, same tap-target and card language as the profile list. */
+.active-tables-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.active-tables-list__button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--felt-850);
+  color: var(--ivory);
+  border: none;
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.active-tables-list__code {
+  font-family: var(--font-mono);
+}
+
+.active-tables-list__seated {
+  color: var(--ivory-dim);
+  font-size: 13px;
+}
+
 .seat-list__row {
   display: flex;
   align-items: center;
@@ -1129,6 +1164,24 @@ body {
   margin: 0;
   color: var(--ivory-dim);
   font-size: 13px;
+}
+
+/* Disabled-primary-action reason line (DESIGN.md: "Disabled primary
+   actions state their reason in one short line"). Amber like error-text,
+   distinct from the neutral __note above. */
+.manage-drawer__reason {
+  margin: 0;
+  color: var(--amber-400);
+  font-size: 13px;
+}
+
+.manage-drawer__quick-picks {
+  display: flex;
+  gap: 8px;
+}
+
+.manage-drawer__quick-picks .button {
+  flex: 1;
 }
 
 .field {

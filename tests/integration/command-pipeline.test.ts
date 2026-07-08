@@ -215,6 +215,106 @@ describe('command pipeline', () => {
     }
   })
 
+  // ADR 0002, Slice 3: the money rules apply over the real command pipeline,
+  // not just in isolated domain unit tests — a client cannot bypass the cap
+  // by sending a raw command instead of using the UI's fixed confirm button.
+  it('rejects a non-default first buy-in sent over the command pipeline (ADR 0002)', () => {
+    const log: BroadcastLog = { snapshotsSeenEvents: [], presence: 0 }
+    const ref = { id: '' }
+    const service = makeService(log, ref)
+    const game = service.createGame({ creatorName: 'Alex' })
+    ref.id = game.gameId
+    service.join({ gameCode: game.code, ...sessionA })
+    const profile = service.createProfile('Alex')
+    service.processCommand(
+      { gameCode: game.code, ...sessionA },
+      {
+        id: 'c1',
+        command: { _tag: 'claim-seat', seatIndex: 0, profileId: profile.profileId },
+      },
+    )
+    const playerId = service.getSnapshot(game.gameId)!.players[0]!.id
+
+    // Table default is 10 EUR = 1000 chips; this player never bought in.
+    const result = service.processCommand(
+      { gameCode: game.code, ...sessionA },
+      {
+        id: 'c2',
+        command: {
+          _tag: 'record-buy-in',
+          playerId,
+          money: { currency: 'EUR', cents: 2000 },
+          chips: 2000,
+        },
+      },
+    )
+    expect(result.status).toBe('rejected')
+    if (result.status === 'rejected') {
+      expect(result.reason).toMatch(/default/i)
+    }
+    // The default amount still goes through.
+    const accepted = service.processCommand(
+      { gameCode: game.code, ...sessionA },
+      {
+        id: 'c3',
+        command: {
+          _tag: 'record-buy-in',
+          playerId,
+          money: { currency: 'EUR', cents: 1000 },
+          chips: 1000,
+        },
+      },
+    )
+    expect(accepted.status).toBe('ack')
+  })
+
+  it('rejects a rebuy above the cap sent over the command pipeline (ADR 0002)', () => {
+    const log: BroadcastLog = { snapshotsSeenEvents: [], presence: 0 }
+    const ref = { id: '' }
+    const service = makeService(log, ref)
+    const game = service.createGame({ creatorName: 'Alex' })
+    ref.id = game.gameId
+    service.join({ gameCode: game.code, ...sessionA })
+    const profile = service.createProfile('Alex')
+    service.processCommand(
+      { gameCode: game.code, ...sessionA },
+      {
+        id: 'c1',
+        command: { _tag: 'claim-seat', seatIndex: 0, profileId: profile.profileId },
+      },
+    )
+    const playerId = service.getSnapshot(game.gameId)!.players[0]!.id
+    service.processCommand(
+      { gameCode: game.code, ...sessionA },
+      {
+        id: 'c2',
+        command: {
+          _tag: 'record-buy-in',
+          playerId,
+          money: { currency: 'EUR', cents: 1000 },
+          chips: 1000,
+        },
+      },
+    )
+
+    const result = service.processCommand(
+      { gameCode: game.code, ...sessionA },
+      {
+        id: 'c3',
+        command: {
+          _tag: 'record-rebuy',
+          playerId,
+          money: { currency: 'EUR', cents: 1500 },
+          chips: 1500,
+        },
+      },
+    )
+    expect(result.status).toBe('rejected')
+    if (result.status === 'rejected') {
+      expect(result.reason).toMatch(/cap/i)
+    }
+  })
+
   it('archives finished games durably so restarts do not resurrect them (PR #171 review)', () => {
     const log: BroadcastLog = { snapshotsSeenEvents: [], presence: 0 }
     const ref = { id: '' }

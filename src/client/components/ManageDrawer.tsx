@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import type { GamePlayer, GameSnapshot } from '../../shared/schema/snapshot'
 import { bySeatOrder } from '../view-helpers'
 import { ConfirmSheet } from './ConfirmSheet'
+import { ShareCard } from './ShareCard'
 
 export interface UndoPreview {
   transactionId: string
@@ -12,6 +13,11 @@ export interface UndoPreview {
   reason?: string
 }
 
+export interface DrawerServerInfo {
+  addresses: string[]
+  localhostOnly: boolean
+}
+
 export interface ManageDrawerProps {
   snapshot: GameSnapshot
   mySeat: number | null
@@ -19,6 +25,8 @@ export interface ManageDrawerProps {
   onClose(): void
   /** Fetches what confirming undo would reverse; null = nothing to undo. */
   loadUndoPreview(): Promise<UndoPreview | null>
+  /** LAN reachability for the mid-game share view (SPEC.md: reachable all night). */
+  loadServerInfo(): Promise<DrawerServerInfo>
 }
 
 type CorrectionTargetValue = `player:${string}` | `pot:${string}`
@@ -41,11 +49,11 @@ type Confirming =
   | { kind: 'restore'; player: GamePlayer }
   | { kind: 'set-active'; player: GamePlayer }
   | { kind: 'release'; player: GamePlayer }
-  | { kind: 'rebuy'; player: GamePlayer; chips: number; cents: number }
+  | { kind: 'rebuy'; player: GamePlayer; chips: number; cents: number; currency: string }
   | { kind: 'correction'; draft: CorrectionDraft }
   | null
 
-type View = 'menu' | 'rebuy' | 'correction' | 'settings'
+type View = 'menu' | 'rebuy' | 'correction' | 'settings' | 'share'
 
 /**
  * The shared table-management sheet (SPEC.md Shared table actions): every
@@ -60,10 +68,21 @@ export function ManageDrawer({
   onCommand,
   onClose,
   loadUndoPreview,
+  loadServerInfo,
 }: ManageDrawerProps) {
   const [view, setView] = useState<View>('menu')
   const [confirming, setConfirming] = useState<Confirming>(null)
   const [undoNote, setUndoNote] = useState<string | null>(null)
+  const [serverInfo, setServerInfo] = useState<DrawerServerInfo | null>(null)
+
+  useEffect(() => {
+    if (view !== 'share') return
+    loadServerInfo()
+      .then(setServerInfo)
+      .catch(() => setServerInfo(null))
+    // Reloaded each time the share view opens: LAN addresses can change
+    // over a long night (Wi-Fi reconnects), and this is a cheap fetch.
+  }, [view, loadServerInfo])
 
   const status = snapshot.game.status
   const hand = snapshot.hand
@@ -127,6 +146,7 @@ export function ManageDrawer({
             {view === 'rebuy' ? 'Rebuy / Add Chips' : null}
             {view === 'correction' ? 'Move Chips' : null}
             {view === 'settings' ? 'Game Settings' : null}
+            {view === 'share' ? 'Share this table' : null}
           </h3>
           {view === 'menu' ? (
             <button type="button" className="button" onClick={onClose}>
@@ -238,6 +258,13 @@ export function ManageDrawer({
             <button
               type="button"
               className="button manage-drawer__action"
+              onClick={() => setView('share')}
+            >
+              Share this table
+            </button>
+            <button
+              type="button"
+              className="button manage-drawer__action"
               onClick={() => setView('settings')}
             >
               Settings
@@ -265,7 +292,13 @@ export function ManageDrawer({
           <RebuyForm
             snapshot={snapshot}
             onReview={(player, chips, cents) =>
-              setConfirming({ kind: 'rebuy', player, chips, cents })
+              setConfirming({
+                kind: 'rebuy',
+                player,
+                chips,
+                cents,
+                currency: snapshot.game.settings.currency,
+              })
             }
           />
         ) : null}
@@ -279,6 +312,14 @@ export function ManageDrawer({
 
         {view === 'settings' ? (
           <SettingsForm snapshot={snapshot} onCommand={onCommand} />
+        ) : null}
+
+        {view === 'share' ? (
+          <ShareCard
+            code={snapshot.game.code}
+            port={window.location.port || '80'}
+            addresses={serverInfo?.addresses ?? []}
+          />
         ) : null}
       </div>
 
@@ -406,14 +447,14 @@ function renderConfirm(
       return (
         <ConfirmSheet
           title={`Rebuy for ${confirming.player.name}?`}
-          detail={`${confirming.player.name} receives ${confirming.chips} chips for ${(confirming.cents / 100).toFixed(2)} ${'EUR'}.`}
+          detail={`${confirming.player.name} receives ${confirming.chips} chips for ${(confirming.cents / 100).toFixed(2)} ${confirming.currency}.`}
           confirmLabel="Confirm Rebuy"
           onCancel={cancel}
           onConfirm={() =>
             commit({
               _tag: 'record-rebuy',
               playerId: confirming.player.id,
-              money: { currency: 'EUR', cents: confirming.cents },
+              money: { currency: confirming.currency, cents: confirming.cents },
               chips: confirming.chips,
             })
           }
@@ -449,6 +490,16 @@ function parseTarget(value: CorrectionTargetValue) {
     : { kind: 'pot' as const, potId: id }
 }
 
+type RebuyPick = 'full' | 'half' | 'custom'
+
+/**
+ * Rebuy amounts (ADR 0002, Slice 4): capped at the table default client-
+ * side too, mirroring the domain cap (Slice 2) — the field can never hold
+ * an above-cap value the player could submit. Full/Half/Custom quick-picks
+ * replace free-form money entry; money is always DERIVED from the chip
+ * ratio, never typed directly (SPEC.md: chips are never labeled as the
+ * currency).
+ */
 function RebuyForm({
   snapshot,
   onReview,
@@ -458,18 +509,22 @@ function RebuyForm({
 }) {
   const players = bySeatOrder(snapshot.players)
   const settings = snapshot.game.settings
-  // Chip value from the default buy-in ratio; the money field stays editable
-  // for tables that price rebuys differently.
-  const ratio =
-    settings.defaultStack > 0
-      ? settings.defaultBuyInCents / settings.defaultStack
-      : 1
+  const cap = settings.defaultStack
+  const ratio = cap > 0 ? settings.defaultBuyInCents / cap : 1
+  // Half rounds to the nearest chip (Decision Log, Slice 4): the default
+  // stack is not guaranteed even, and floor-only would under-credit a
+  // player by up to one chip for no reason.
+  const halfChips = Math.round(cap / 2)
+
   const [playerId, setPlayerId] = useState(players[0]?.id ?? '')
-  const [chips, setChips] = useState<number>(settings.defaultStack)
-  const [cents, setCents] = useState<number>(
-    Math.round(settings.defaultStack * ratio),
-  )
+  const [pick, setPick] = useState<RebuyPick>('full')
+  const [customChips, setCustomChips] = useState<number>(cap)
   const player = players.find((p) => p.id === playerId)
+
+  const chips =
+    pick === 'full' ? cap : pick === 'half' ? halfChips : customChips
+  const cents = Math.round(chips * ratio)
+  const invalid = chips <= 0 || chips > cap || cents <= 0
 
   return (
     <div className="manage-drawer__form">
@@ -487,39 +542,67 @@ function RebuyForm({
           ))}
         </select>
       </label>
-      <label className="field">
-        <span>Chips</span>
-        <input
-          className="input"
-          type="number"
-          min={1}
-          value={chips}
-          onChange={(e) => {
-            const value = Number(e.target.value)
-            if (Number.isFinite(value)) {
-              setChips(value)
-              setCents(Math.round(value * ratio))
-            }
-          }}
-        />
-      </label>
-      <label className="field">
-        <span>Money (cents)</span>
-        <input
-          className="input"
-          type="number"
-          min={1}
-          value={cents}
-          onChange={(e) => {
-            const value = Number(e.target.value)
-            if (Number.isFinite(value)) setCents(value)
-          }}
-        />
-      </label>
+
+      <div className="manage-drawer__quick-picks" role="group" aria-label="Rebuy amount">
+        <button
+          type="button"
+          className={pick === 'full' ? 'button button--primary' : 'button'}
+          onClick={() => setPick('full')}
+        >
+          Full
+        </button>
+        <button
+          type="button"
+          className={pick === 'half' ? 'button button--primary' : 'button'}
+          onClick={() => setPick('half')}
+        >
+          Half
+        </button>
+        <button
+          type="button"
+          className={pick === 'custom' ? 'button button--primary' : 'button'}
+          onClick={() => setPick('custom')}
+        >
+          Custom
+        </button>
+      </div>
+
+      {pick === 'custom' ? (
+        <label className="field">
+          <span>Chips (max {cap})</span>
+          <input
+            className="input"
+            type="number"
+            min={1}
+            max={cap}
+            value={customChips}
+            onChange={(e) => {
+              const value = Number(e.target.value)
+              if (Number.isFinite(value)) {
+                // Clamped, not merely validated: the field itself never
+                // holds an above-cap value (ADR 0002 rebuy cap).
+                setCustomChips(Math.max(0, Math.min(cap, Math.round(value))))
+              }
+            }}
+          />
+        </label>
+      ) : (
+        <p className="setup-ratio">{chips} chips</p>
+      )}
+
+      <p className="manage-drawer__note">
+        {(cents / 100).toFixed(2)} {settings.currency} → {chips} chips
+      </p>
+      {invalid ? (
+        <p className="manage-drawer__reason">
+          Amount must be between 1 and {cap} chips.
+        </p>
+      ) : null}
+
       <button
         type="button"
         className="button button--primary"
-        disabled={!player || chips <= 0 || cents <= 0}
+        disabled={!player || invalid}
         onClick={() => player && onReview(player, chips, cents)}
       >
         Review Rebuy

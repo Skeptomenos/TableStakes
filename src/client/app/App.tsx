@@ -1,5 +1,6 @@
-import { GAME_ROUTE_PREFIX } from '../../shared/routes'
+import { CONSOLE_ROUTE, GAME_ROUTE_PREFIX } from '../../shared/routes'
 import { usePath } from '../router'
+import { ConsoleRoute } from '../routes/ConsoleRoute'
 import { GameRoute } from '../routes/GameRoute'
 import { HomeRoute } from '../routes/HomeRoute'
 
@@ -18,7 +19,13 @@ export function App() {
         {/* key: a code change must REMOUNT the route — snapshot/seat/profile
             state from one game may never bleed into another, and the old
             socket must drop (post-verification F7). */}
-        {gameCode ? <GameRoute key={gameCode} code={gameCode} /> : <HomeRoute />}
+        {gameCode ? (
+          <GameRoute key={gameCode} code={gameCode} />
+        ) : path === CONSOLE_ROUTE ? (
+          <ConsoleRoute />
+        ) : (
+          <HomeRoute />
+        )}
       </section>
     </main>
   )

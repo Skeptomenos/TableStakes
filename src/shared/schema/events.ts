@@ -64,7 +64,9 @@ export const GameEvent = Schema.Union(
   // Game lifecycle
   Schema.TaggedStruct('game-created', {
     code: GameCode,
-    creatorProfileId: ProfileId,
+    // Null for console-created tables (ADR 0002): no profile is required to
+    // create a game; the audit records console origin instead.
+    creatorProfileId: Schema.NullOr(ProfileId),
   }),
   Schema.TaggedStruct('game-configured', { settings: GameSettings }),
   Schema.TaggedStruct('game-reset', {}),

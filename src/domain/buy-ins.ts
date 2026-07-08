@@ -70,6 +70,30 @@ export function recordBuyIn(
     return err(new InvalidAction({ reason: 'unknown player for buy-in' }))
   }
 
+  // ADR 0002: a player's FIRST buy-in must equal the table default
+  // exactly (money and chips) — everyone starts equal, one tap, no
+  // variance. `totalChipsPurchased === 0` tells a never-bought-in player
+  // from later top-ups. A direct second-or-later recordBuyIn call (the
+  // usual path for later top-ups is record-rebuy, capped identically) is
+  // still capped at the default rather than left open — "chips enter at
+  // most default-sized" holds through every entry point.
+  const { defaultBuyInCents, defaultStack } = snapshot.game.settings
+  if (player.totalChipsPurchased === 0) {
+    if (money.cents !== defaultBuyInCents || chips !== defaultStack) {
+      return err(
+        new InvalidAction({
+          reason: `first buy-in must be the table default (${defaultBuyInCents} cents / ${defaultStack} chips)`,
+        }),
+      )
+    }
+  } else if (money.cents > defaultBuyInCents || chips > defaultStack) {
+    return err(
+      new InvalidAction({
+        reason: `buy-in is capped at the table default (${defaultBuyInCents} cents / ${defaultStack} chips)`,
+      }),
+    )
+  }
+
   const next: GamePlayer = {
     ...player,
     stack: makeChips(player.stack + chips),

@@ -27,9 +27,11 @@ export function welcomeBanner(options: {
   }
 
   const url = `http://${addresses[0]}:${port}`
+  const consoleUrl = `http://${addresses[0]}:${port}/console`
   lines.push('  1. Keep this window open — it is the table.')
-  lines.push(`  2. Open ${url} on this computer`)
-  lines.push('     and tap "Create New Profile" to start a table.')
+  lines.push('  2. The table console opens in your browser —')
+  lines.push('     set the buy-in and blinds, hit Create.')
+  lines.push(`     (if it did not open: ${consoleUrl})`)
   lines.push('  3. Players: scan this with your phone camera —')
   lines.push('')
   for (const row of renderUnicodeCompact(url).split('\n')) {

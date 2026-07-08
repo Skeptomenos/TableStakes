@@ -176,12 +176,13 @@ Required elements:
 
 - Title: `Join Local Game`.
 - Full local URL display, for example `http://192.168.1.5:8080/g/48317`.
-- Manual game-code input (implemented on the home screen: type the five-digit code, land on `/g/<code>`).
+- Manual game-code input (on the player landing `/`: type the five-digit code, land on `/g/<code>`).
+- Active-tables list on the player landing: one row per open table (code, seated count), tap to join (ADR 0002).
 - `Connect to Table` or `Claim Seat` primary action.
-- Profile selection section labeled `Select or Create Profile`.
+- Profile selection section labeled `Select or Create Profile`. Selecting a profile only selects it — no navigation side effects, and never any table creation on a player surface.
 - Local profile rows such as `Alex (Local)` and `Sarah (Local)`.
 - `Create New Profile` row with a person-add icon.
-- Recent games may appear as a convenience, but must not replace direct URL/code joining.
+- After claiming a seat: the buy-in confirmation screen — the fixed table default stated plainly (`Buy in for 10 EUR → 1,000 chips`), one primary confirm action, no amount entry (ADR 0002).
 
 An in-app QR scanner affordance is OUT of MVP scope (Slice 12 decision): the phone camera app scans the share-screen QR natively and opens `/g/<code>` directly, so an in-app scanner would duplicate the OS. Revisit only if playtesting shows players cannot find their camera.
 
@@ -195,9 +196,11 @@ Seat claiming screen states:
 
 ## First-Hand Setup
 
-The setup screen follows `MVP Setup Game` and `Admin Setup`.
+Setup splits across surfaces (ADR 0002, SPEC.md First-Hand Setup). The
+table-settings screen lives on the console and follows `MVP Setup Game` /
+`Admin Setup` visually; buy-in confirmation lives on the phone.
 
-Required fields:
+Console table-settings fields:
 
 - Currency.
 - Buy-in money.
@@ -205,15 +208,17 @@ Required fields:
 - Small blind.
 - Big blind.
 - Strict mode toggle, default off.
-- Seating order from seat 1 through seat 10.
-- Dealer selection shown as a single dealer marker on exactly one player.
+
+Console after creation: permanent share card (QR, URL, code), the seat
+overview from seat 1 through seat 10 with `[Empty]` rows filling live, and —
+once two or more players have bought in — dealer selection shown as a
+single dealer marker on exactly one player plus the start action.
 
 Setup rules:
 
 - Show the money-to-chip relationship directly, for example `10 EUR = 1000 chips`.
 - Do not label chips as the currency.
-- Empty seats show `[Empty]` plus an add-player affordance.
-- The primary completion action is `Start Game`.
+- Disabled primary actions state their reason in one short line (for example `Waiting for a second player to buy in`).
 - The screen can scroll during setup; this is not a live-hand screen.
 
 ## Live Table
@@ -300,7 +305,8 @@ The manage surface should include:
 - Mark interrupted player folded.
 - Sit out next hand.
 - Return from sit-out.
-- Rebuy or add chips.
+- Rebuy or add chips: quick-picks `Full` / `Half` / `Custom`, custom capped at the table default (ADR 0002).
+- Share this table: the share card (QR, URL, code) for mid-game late arrivals.
 - Award or split pot.
 - Cancel hand.
 - Finish game and start cash-out.
@@ -337,14 +343,15 @@ Stitch does not yet provide a complete cash-out/history screen. Implement it usi
 - Explicit rounding remainder when present.
 - Finished-game history derives from local player profiles and finished-game summaries.
 
-## Host And Desktop Surfaces
+## Console And Desktop Surfaces
 
-Stitch does not provide desktop screens. Host and laptop surfaces, including the share screen, table overview, history, and stats, reuse the same Felt & Ledger patterns:
+Stitch does not provide desktop screens. The table console (`/console` — creation, settings, permanent share card, seat overview, first-dealer pick, history, stats) reuses the same Felt & Ledger patterns:
 
 - Same color tokens, Inter typography, and badge language as the mobile screens.
 - Dense table-style rows and wider multi-column layouts instead of new decorative components.
-- The share screen may enlarge the QR code and full URL for across-the-table scanning.
-- No new Stitch screens are required for the MVP.
+- The console enlarges the QR code and full URL for across-the-table scanning, and keeps them visible all night.
+- Phones reach the same share card mid-game from the Manage drawer.
+- No new Stitch screens are required.
 
 ## Accessibility And Contrast
 

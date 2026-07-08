@@ -1,7 +1,7 @@
 # Poker Chip Counter SPEC
 
 Status: Draft
-Last updated: 2026-07-02
+Last updated: 2026-07-08 (console/player surface separation, ADR 0002)
 
 ## Purpose
 
@@ -56,14 +56,13 @@ Phone portrait is the authoritative gameplay surface. Core in-hand state and con
 
 Landscape phone gameplay is out of scope for the MVP. Landscape should show a rotate-to-portrait prompt.
 
-Laptop and larger screens are secondary host surfaces for:
+The app separates two workflows by route, never by device detection (ADR 0002):
 
-- Starting or resuming a game.
-- Sharing the join URL and QR code.
-- Setup.
-- Table overview.
-- History.
-- Stats.
+- **Table console (`/console`)** — the table-lifecycle surface, normally the host laptop. Creates the table, configures settings, displays the join QR and code for the whole night, shows who is seated, picks the first dealer, starts the first hand, and offers table overview, history, and stats. `start.sh` opens the console in a browser automatically.
+- **Player surface (`/g/<code>`)** — the player-lifecycle surface, normally a phone. Pick or create a profile, claim a seat, confirm the buy-in, play.
+- **Player landing (`/`)** — a minimal entry point for anyone who reaches the bare host address: join by code and a tap-to-join list of active tables. No table creation.
+
+Console-primary is not console-exclusive: any connected client can use shared table actions, and the laptop may legitimately claim a seat and play. No surface is hard-blocked by device.
 
 ## Game URL And Hosting
 
@@ -73,7 +72,7 @@ The host manually starts one local Node.js server on a laptop. Phones connect ov
 http://<host>:<port>/g/<five-digit-code>
 ```
 
-The server can host multiple active games at once, keyed by five-digit code. The host UI may optimize for one current game.
+The server can host multiple active games at once, keyed by five-digit code. The console manages tables (create, share, overview) and may optimize for one current game; the player landing lists all active tables for joining.
 
 Game code generation must:
 
@@ -82,7 +81,7 @@ Game code generation must:
 - Regenerate on collision.
 - Show a clear error if collision attempts are exhausted.
 
-The host/share screen must show:
+The share surface must show:
 
 - QR code for the full game URL.
 - Full local URL.
@@ -90,6 +89,8 @@ The host/share screen must show:
 - Chosen LAN address.
 - Warning when the server is only reachable on localhost.
 - Reachability hints when multiple local addresses are available.
+
+The share surface must stay reachable for the whole night, not only during setup (ADR 0002): the console displays it permanently, and seated players can open it from the phone's table-management drawer so late arrivals can scan mid-game.
 
 ## Player Identity And Reconnect
 
@@ -108,10 +109,11 @@ The MVP does not require players to see, copy, enter, or manage any reconnect to
 
 Join flow:
 
-1. Open `/g/<code>`.
+1. Open `/g/<code>` — by scanning the console's QR, a seated player's shared QR, entering the code on the player landing, or tapping the table in the landing's active-tables list.
 2. Select an existing local player profile or create a new one.
 3. Claim an available or interrupted game seat.
-4. If joining during a hand as a new player, enter active play only between hands.
+4. Confirm the table's default buy-in (skipped when reclaiming a seat that already has chips).
+5. If joining during a hand as a new player, enter active play only between hands.
 
 Seat claiming rules:
 
@@ -137,19 +139,19 @@ Manual disaster recovery:
 
 ## Roles And Permissions
 
-Creating a game requires selecting or creating a local player profile. The creating profile is recorded for audit purposes only and has no special privileges.
+Tables are created from the console (`/console`); no player surface offers creation. Creating a game does not require a profile — when one is supplied it is recorded for audit purposes only and has no special privileges; console-created games record their console origin instead. Selecting a profile never creates or joins a game by itself.
 
 The MVP has no privileged admin role. Every connected player can change game settings and use shared table actions. Every accepted action is logged with the acting profile in the audit feed, and the physically present table socially polices misuse.
 
 Shared setup and settings controls available to all connected players:
 
-- First-hand setup.
+- Table settings (console-primary at creation, editable later from any client).
 - Starting stack and buy-in defaults.
 - Manual blind changes. Applied from the next hand.
 - Raise-rule selection. Applied from the next hand.
 - Strict-mode toggle. Applied from the next hand.
 - Amount step size. Applied immediately.
-- Seating order and dealer selection.
+- First-dealer selection (players seat themselves; there is no host-side seating-order input).
 - Player deletion.
 - Game reset.
 - Finish game and start end-of-night cash-out.
@@ -179,17 +181,15 @@ Even in soft mode, a connected non-active player cannot submit another player's 
 
 ## First-Hand Setup
 
-Setup before the first hand is one compact screen, not a wizard.
+Setup splits across the two surfaces in three steps (ADR 0002); each step is one compact screen, not a wizard.
 
-Required fields:
+**1. Table settings — console, at creation:**
 
 - Currency.
 - Default buy-in money.
 - Default chip stack.
 - Small blind.
 - Big blind.
-- Players and seating order.
-- Dealer button.
 - Strict-mode toggle, default off.
 
 Example buy-in model:
@@ -200,17 +200,17 @@ Example buy-in model:
 
 The app derives chip value from the money-to-chip ratio. Chips remain the unit for live hand play.
 
-The raise rule defaults to `Any raise` and is changed later in game settings, not in first-hand setup.
+The raise rule defaults to `Any raise` and is changed later in game settings, not in table settings.
 
-Optional row-level setup:
+**2. Buy-in confirmation — phone, after claiming a seat:**
 
-- Individual buy-in override.
-- Individual starting stack override.
-- Player rename.
-- Seat reorder.
-- Empty seat insertion.
+Each player explicitly confirms the table's default buy-in ("10 EUR → 1000 chips") in one tap. The amount is fixed — everyone starts with the same money and the same chips; there is no player-side variance and no individual override. Declining means not sitting. A claimed seat without a confirmed buy-in is shown as waiting to buy in and is not dealt in.
 
-Advanced setup fields stay out of MVP unless playtesting proves they are required.
+**3. First dealer — console-primary, once two or more players have bought in:**
+
+Dealer selection picks the first hand's button only; from then on the button advances automatically between hands (see Blinds). Any connected client may also pick the dealer and start the hand — no admin role.
+
+Advanced setup fields (seat reorder, rename, empty seat insertion) stay out of MVP unless playtesting proves they are required.
 
 ## Blinds
 
@@ -315,12 +315,14 @@ Required layout:
 - One central amount display below the slider.
 - Sparse action row: `Fold`, `Check` or `Call <amount>`, `Bet` or `Raise`, `All-in`.
 
-Do not include preset quick-chip shortcut buttons in the MVP, including:
+Do not include preset quick-chip shortcut buttons in the live action panel, including:
 
 - `+1 BB`.
 - `+5 BB`.
 - `Half stack`.
 - Any other quick raise bank.
+
+This prohibition is scoped to in-hand betting. The rebuy screen's `Full` / `Half` / `Custom` quick-picks (ADR 0002) are a different surface and are required.
 
 Amount behavior:
 
@@ -513,19 +515,23 @@ Money appears only in setup, rebuy, cash-out, and settlement. Live hand play rem
 
 Money is tracked in integer cents. Chips are tracked as integers.
 
-Default buy-in:
+Buy-in (ADR 0002):
 
-- Records money amount.
-- Records chips received.
-- Defines chip value as a rational ratio.
+- Is exactly the table's configured default — money and chips. The domain rejects a first buy-in that differs from the default.
+- Is confirmed explicitly by the player after claiming a seat (see First-Hand Setup).
+- Records money amount and chips received; defines chip value as a rational ratio.
 
-Rebuy:
+Rebuy (ADR 0002):
 
+- Any amount above zero up to at most the configured default — never more. Money and chips stay proportional via the table ratio; the domain rejects amounts above the cap.
+- The rebuy screen offers Full / Half / Custom amounts.
 - Adds money and chips to a player.
 - Writes an audit event.
 - Normally happens between hands.
 - During active hands, only folded, out-of-hand, or sitting-out players can rebuy.
 - Active-hand rebuy chips apply next hand so current-hand eligibility and side pots are not changed.
+
+Corrections remain the audited escape hatch for non-standard table situations: they move chips zero-sum and never create money, so conservation holds.
 
 Zero-chip player:
 
@@ -619,28 +625,28 @@ The UI should not feel like a marketing page, casino game, or decorative poker t
 
 The Stitch project uses Deep Stack Logic as the active design direction. `DESIGN.md` captures the local implementation contract derived from the Stitch mobile screens.
 
-Required MVP screens:
+Required MVP screens (ADR 0002 surfaces):
 
+- Table console: creation/settings, permanent share card, seat overview, first-dealer pick.
+- Player landing: join by code, active-tables list.
 - Join and seat selection.
-- First-hand setup.
+- Buy-in confirmation.
 - Live table play.
-- Table action drawer or sheet.
+- Table action drawer or sheet (including the mid-game share card).
 - Hand settlement.
 - Rebuy or add chips.
 - End-of-night cash-out.
-- Host share screen.
 
 Join and seat selection must show:
 
-- QR-first game sharing on host surfaces.
 - Full local URL and five-digit code fallback.
-- Local profile selection or profile creation.
+- Local profile selection or profile creation (selection has no side effects).
 - Available seats as claimable.
 - Active connected seats as locked.
 - Interrupted seats as reserved or recoverable.
 - No PIN, password, or account-login surface.
 
-First-hand setup must show the money-to-chip relationship directly, for example `10 EUR = 1000 chips`. It must not label chips as the currency. Dealer selection must behave as a single selected dealer button, not as independent toggles that imply multiple dealers. Strict mode defaults off.
+The console's table-settings form and the buy-in confirmation screen must show the money-to-chip relationship directly, for example `10 EUR = 1000 chips`, and must not label chips as the currency. Dealer selection must behave as a single selected dealer button, not as independent toggles that imply multiple dealers. Strict mode defaults off.
 
 Game settings must include amount step size controls:
 
@@ -665,12 +671,14 @@ Settlement must make winner selection explicit before showing `Take all eligible
 
 ## MVP Acceptance Criteria
 
-- Host can start the local server manually and share one game URL.
-- Host screen shows QR code, full URL, five-digit code, LAN address, and localhost warning when needed.
-- Players can join by selecting or creating a local profile and claiming a seat.
+- Host can start the local server manually; the console creates the table and shares one game URL.
+- Console shows QR code, full URL, five-digit code, LAN address, and localhost warning when needed — for the whole night, not only during setup.
+- No player surface (landing or game route) can create a table; selecting a profile never creates a game.
+- Players can join by selecting or creating a local profile, claiming a seat, and confirming the default buy-in.
+- A first buy-in that differs from the table default is rejected; a rebuy above the default is rejected.
 - Active seats are locked from other claim attempts.
 - Interrupted seats remain reserved and recoverable.
-- First-hand setup fits one compact screen and includes all required fields.
+- Each setup step (table settings, buy-in confirmation, dealer pick) fits one compact screen.
 - A complete hand can run from blinds through settlement.
 - Check taps advance turn order.
 - Street closure highlights `Next street`.

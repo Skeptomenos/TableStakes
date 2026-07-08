@@ -45,6 +45,18 @@ function connectBot(name, code, sessionId) {
   })
 }
 
+// The server sends the initial snapshot right after 'connect', but as a
+// separate message — connectBot's promise can resolve slightly before it
+// arrives. /join needs the table's default buy-in settings before it can
+// send record-buy-in, so wait for the snapshot explicitly instead of
+// racing it.
+function waitForSnapshot(bot, deadline = Date.now() + 3000) {
+  if (bot.snapshot || Date.now() > deadline) return Promise.resolve(bot.snapshot)
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(waitForSnapshot(bot, deadline)), 25)
+  })
+}
+
 function sendCommand(bot, command) {
   return new Promise((resolve) => {
     const id = `bot-${bot.name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -122,7 +134,34 @@ async function route(path, input, params) {
         seatIndex: seat,
         profileId: profile.profileId,
       })
-      return { profileId: profile.profileId, sessionId, claim, joinError: bot.joinError }
+      // ADR 0002: claiming a seat no longer credits chips by itself — the
+      // choreography flip moved the auto-buy-in out of setup entirely.
+      // Bots must explicitly confirm the buy-in (exact table default) the
+      // same way a phone's BuyInConfirm does, or every bot-driven dogfood
+      // scenario would seat players with zero chips and never deal them
+      // in. Skipped when reclaiming a seat that already has chips, same
+      // as the phone flow.
+      let buyIn = null
+      if (claim.status === 'ack') {
+        const snapshot = await waitForSnapshot(bot)
+        const me = snapshot?.players.find((p) => p.seatIndex === seat)
+        if (me && me.stack === 0) {
+          const { defaultBuyInCents, defaultStack, currency } = snapshot.game.settings
+          buyIn = await sendCommand(bot, {
+            _tag: 'record-buy-in',
+            playerId: me.id,
+            money: { currency, cents: defaultBuyInCents },
+            chips: defaultStack,
+          })
+        }
+      }
+      return {
+        profileId: profile.profileId,
+        sessionId,
+        claim,
+        buyIn,
+        joinError: bot.joinError,
+      }
     }
     case '/cmd': {
       const bot = bots.get(input.name)

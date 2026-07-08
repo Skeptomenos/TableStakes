@@ -1,63 +1,62 @@
 import { useEffect, useState } from 'react'
 
 import {
-  createGame,
   createProfile,
   getHistory,
   getProfiles,
   getProfileStats,
+  listGames,
+  type ActiveGameInfo,
   type ProfileInfo,
 } from '../api'
+import { ActiveTablesList } from '../components/ActiveTablesList'
 import { HistoryList } from '../components/HistoryList'
 import { JoinByCode } from '../components/JoinByCode'
 import { ProfileSelector } from '../components/ProfileSelector'
 import { ProfileStatsPanel } from '../components/ProfileStatsPanel'
 import { navigate } from '../router'
-import { rememberProfile } from '../session'
+import { rememberLastProfile } from '../session'
 
 /**
- * Host surface: pick or create a local profile, then start a table. The
- * creating profile is recorded for audit only — no admin role exists.
+ * Player landing (ADR 0002, SPEC.md): join by code, tap-to-join active
+ * tables, and a select-only profile picker. No player surface can create
+ * a table — selecting a profile only writes a reconnect hint, never
+ * navigates or creates anything.
  */
 export function HomeRoute() {
   const [profiles, setProfiles] = useState<ProfileInfo[]>([])
+  const [games, setGames] = useState<ActiveGameInfo[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     getProfiles().then(setProfiles).catch((e: Error) => setError(e.message))
+    listGames().then(setGames).catch(() => setGames([]))
   }, [])
-
-  async function startTable(profileId: string) {
-    if (busy) return
-    setBusy(true)
-    try {
-      const game = await createGame(profileId)
-      rememberProfile(game.code, profileId)
-      navigate(`/g/${game.code}`)
-    } catch (e) {
-      setError((e as Error).message)
-      setBusy(false)
-    }
-  }
 
   return (
     <div className="stack">
       <p className="lede">
-        Start a table on this laptop; phones on the same Wi-Fi join with a QR
-        code.
+        Join a table on this Wi-Fi: scan the console's QR, type its code, or
+        tap it below.
       </p>
       {error ? <p className="error-text">{error}</p> : null}
       <section className="card" aria-label="Join a game">
         <h2 className="card__title">Join a Game</h2>
         <JoinByCode onJoin={(code) => navigate(`/g/${code}`)} />
+        <ActiveTablesList
+          games={games}
+          onJoin={(code) => navigate(`/g/${code}`)}
+        />
       </section>
       <ProfileSelector
         profiles={profiles}
-        onSelect={(profileId) => void startTable(profileId)}
+        onSelect={rememberLastProfile}
         onCreate={(name) =>
           void createProfile(name)
-            .then((profile) => startTable(profile.profileId))
+            .then((profile) => {
+              setProfiles((prev) => [...prev, profile])
+              rememberLastProfile(profile.profileId)
+            })
             .catch((e: Error) => setError(e.message))
         }
       />

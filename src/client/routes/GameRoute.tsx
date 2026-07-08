@@ -9,10 +9,10 @@ import {
   type ProfileInfo,
   type ServerInfo,
 } from '../api'
+import { BuyInConfirm } from '../components/BuyInConfirm'
 import { CashOutScreen } from '../components/CashOutScreen'
 import { ProfileSelector } from '../components/ProfileSelector'
 import { SeatList } from '../components/SeatList'
-import { SetupForm, type SetupPayload } from '../components/SetupForm'
 import { ShareCard } from '../components/ShareCard'
 import { TableScreen } from '../components/TableScreen'
 import { connectToGame, type GameConnection } from '../socket-client'
@@ -24,8 +24,12 @@ export interface GameRouteProps {
 }
 
 /**
- * The per-game flow for the setup phase: connect, pick a profile, claim a
- * seat, complete first-hand setup. Live play arrives in the next slice.
+ * The per-game phone flow (ADR 0002): connect, pick a profile, claim a
+ * seat, confirm the fixed default buy-in, wait for the table. Table
+ * lifecycle (settings, dealer pick) lives on the console — this route
+ * never configures the game or picks the dealer itself, though phone-side
+ * Start Hand stays available once the table is ready (console-primary,
+ * not console-exclusive).
  */
 export function GameRoute({ code }: GameRouteProps) {
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null)
@@ -37,7 +41,6 @@ export function GameRoute({ code }: GameRouteProps) {
     recallProfile(code),
   )
   const [mySeat, setMySeat] = useState<number | null>(null)
-  const [setupSubmitted, setSetupSubmitted] = useState(false)
   const connectionRef = useRef<GameConnection | null>(null)
 
   useEffect(() => {
@@ -81,26 +84,19 @@ export function GameRoute({ code }: GameRouteProps) {
     }
   }
 
-  async function completeSetup(payload: SetupPayload) {
+  async function confirmBuyIn(player: NonNullable<ReturnType<typeof myPlayerOf>>) {
     if (!snapshot) return
-    if (!(await send({ _tag: 'configure-game', settings: payload.settings }))) return
-    if (!(await send({ _tag: 'set-dealer', seatIndex: payload.dealerSeat }))) return
-    // Default buy-in for every seated player still without chips.
-    for (const player of bySeatOrder(snapshot.players)) {
-      if (player.stack === 0) {
-        const ok = await send({
-          _tag: 'record-buy-in',
-          playerId: player.id,
-          money: {
-            currency: payload.settings.currency,
-            cents: payload.settings.defaultBuyInCents,
-          },
-          chips: payload.settings.defaultStack,
-        })
-        if (!ok) return
-      }
-    }
-    setSetupSubmitted(true)
+    const { defaultBuyInCents, defaultStack, currency } = snapshot.game.settings
+    await send({
+      _tag: 'record-buy-in',
+      playerId: player.id,
+      money: { currency, cents: defaultBuyInCents },
+      chips: defaultStack,
+    })
+  }
+
+  function myPlayerOf(s: GameSnapshot) {
+    return s.players.find((p) => p.seatIndex === mySeat) ?? null
   }
 
   if (joinError) {
@@ -112,6 +108,7 @@ export function GameRoute({ code }: GameRouteProps) {
 
   const status = snapshot.game.status
   const seated = bySeatOrder(snapshot.players)
+  const myPlayer = myPlayerOf(snapshot)
 
   // Live play takes over the whole viewport once the game leaves setup.
   if (status === 'in-hand' || status === 'showdown' || status === 'between-hands') {
@@ -165,9 +162,18 @@ export function GameRoute({ code }: GameRouteProps) {
         <SeatList snapshot={snapshot} onClaim={(seat) => void claimSeat(seat)} />
       </>
     )
-  } else if (status === 'setup' && !setupSubmitted) {
-    phase = <SetupForm snapshot={snapshot} onStart={(p) => void completeSetup(p)} />
+  } else if (myPlayer && myPlayer.stack === 0) {
+    // Reclaiming a seat that already has chips skips this phase — only a
+    // never-bought-in seat (stack === 0) needs the confirmation (ADR 0002).
+    phase = (
+      <BuyInConfirm
+        settings={snapshot.game.settings}
+        onConfirm={() => void confirmBuyIn(myPlayer)}
+      />
+    )
   } else {
+    const boughtIn = seated.filter((p) => p.stack > 0)
+    const canStart = boughtIn.length >= 2
     phase = (
       <section className="card" aria-label="Table status">
         <h2 className="card__title">Table is set</h2>
@@ -184,11 +190,14 @@ export function GameRoute({ code }: GameRouteProps) {
         <button
           type="button"
           className="button button--primary"
-          disabled={seated.filter((p) => p.stack > 0).length < 2}
+          disabled={!canStart}
           onClick={() => void send({ _tag: 'start-hand' })}
         >
           Start Hand
         </button>
+        {!canStart ? (
+          <p className="lede">Waiting for a second player to buy in.</p>
+        ) : null}
       </section>
     )
   }

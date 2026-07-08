@@ -29,8 +29,8 @@ That's it. The first run installs and builds (a minute or two); after that it st
   ♠ TableStakes — your phones are the chips
   ────────────────────────────────────────────────
   1. Keep this window open — it is the table.
-  2. Open http://192.168.1.5:8080 on this computer
-     and tap "Create New Profile" to start a table.
+  2. The table console opens in your browser:
+     set the buy-in and blinds, hit Create.
   3. Players: scan this with your phone camera —
 
      █▀▀▀▀▀█ ▀▄█▀▄ █▀▀▀▀▀█
@@ -39,11 +39,11 @@ That's it. The first run installs and builds (a minute or two); after that it st
      ▀▀▀▀▀▀▀ ▀ ▀ ▀ ▀▀▀▀▀▀▀
 ```
 
-Players scan the QR with their phone camera (or type the short address), pick a name, and grab a seat. No downloads, no sign-ups — it opens right in the phone browser.
+Players scan the QR with their phone camera (or type the short address), pick a name, grab a seat, and confirm the buy-in. No downloads, no sign-ups — it opens right in the phone browser.
 
 ## How a night works
 
-1. **Set up in one screen.** Buy-in (say €10 = 1000 chips), blinds, who's dealer. Done in thirty seconds.
+1. **The laptop is the table.** Its console sets the stakes once — buy-in (say €10 = 1000 chips) and blinds — and shows the join QR all night. Everyone buys in for the same amount with one tap on their phone; once two players are seated, pick the first dealer and deal.
 2. **Play your cards.** The app posts blinds, tracks whose turn it is, and totals the pot live in the middle of the table screen. Your phone shows your stack and your options — tap Call, tap Raise, drag the slider for a big move. Fold and all-in ask "are you sure?" — everything else is one tap.
 3. **Let it do the hard math.** Three people all-in with different stacks? Side pots are built and settled in order, automatically. Split pot? Enter the split, the app checks it to the chip.
 4. **Life happens, the game doesn't stop.** Phone died mid-hand? Your seat and stack wait for you — scan back in and you're where you were. Someone heads home early? Release their seat; their chips stay counted for the payout. Fat-fingered a bet? One tap of Undo reverses the last action for the whole table.
@@ -53,7 +53,7 @@ Players scan the QR with their phone camera (or type the short address), pick a 
 
 | At the table | Money & rules | Keeping the night safe |
 |---|---|---|
-| 2–10 players | Buy-ins & rebuys, any € amount | Reconnect to your seat after phone sleep |
+| 2–10 players | Fixed buy-in for all, rebuys up to the buy-in | Reconnect to your seat after phone sleep |
 | Blinds, checks, bets, raises, all-ins | Choose your raise rules: anything-goes, double, or standard | Undo the last action, table-visible |
 | Side pots, split pots, settlement in order | Strict mode for by-the-book games (off by default) | Chip corrections when reality and app disagree |
 | Live pot & turn tracking on every phone | End-of-night settlement, minimized payments | Games survive laptop restarts |

@@ -51,5 +51,17 @@ if [ ! -f dist/server.mjs ] || [ -n "$(find src index.html pnpm-lock.yaml -newer
   pnpm build >/dev/null
 fi
 
-# 5. Deal.
+# 5. Open the table console (ADR 0002): the host runs the table from the
+#    browser, not the terminal. Backgrounded so a slow/missing opener never
+#    blocks the server; silent no-op if neither `open` nor `xdg-open`
+#    exists. This lives here, never in the server itself — tests and CI
+#    boot the server headless.
+CONSOLE_URL="http://localhost:${PORT:-8080}/console"
+if command -v open >/dev/null 2>&1; then
+  ( sleep 2 && open "$CONSOLE_URL" ) >/dev/null 2>&1 &
+elif command -v xdg-open >/dev/null 2>&1; then
+  ( sleep 2 && xdg-open "$CONSOLE_URL" ) >/dev/null 2>&1 &
+fi
+
+# 6. Deal.
 exec node dist/server.mjs

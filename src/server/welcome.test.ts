@@ -9,6 +9,9 @@ describe('welcomeBanner', () => {
     // QR block: uqr's compact unicode rendering uses half-block glyphs.
     expect(banner).toMatch(/[█▀▄]/)
     expect(banner).toContain('Keep this window open')
+    // ADR 0002: the console instruction replaces the old profile-tap copy.
+    expect(banner).toContain('The table console opens in your browser')
+    expect(banner).toContain('http://192.168.1.5:8080/console')
     expect(banner).toContain('scan this with your phone camera')
     expect(banner).toContain('Ctrl+C')
   })

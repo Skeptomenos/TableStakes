@@ -1,7 +1,7 @@
 # Poker Chip Counter Architecture
 
 Status: Draft
-Last updated: 2026-07-02
+Last updated: 2026-07-08 (console/player surface separation, ADR 0002)
 
 ## Architecture Goals
 
@@ -27,10 +27,14 @@ Last updated: 2026-07-02
 ## Runtime Topology
 
 ```text
-Phone browser(s)  ─┐
-Host browser      ─┼─ HTTP + Socket.IO ─ Node server ─ SQLite database
-Phone browser(s)  ─┘
+Player browsers (/g/<code>, /) ─┐
+Console browser (/console)     ─┼─ HTTP + Socket.IO ─ Node server ─ SQLite database
+Player browsers (/g/<code>)    ─┘
 ```
+
+Surfaces are separated by route, not by device (ADR 0002): any browser can
+open any route; the console is normally the host laptop and the player
+routes are normally phones.
 
 The Node server owns canonical state. Clients render snapshots and submit commands. They do not independently mutate chip balances.
 
@@ -125,7 +129,7 @@ Clients should not consider a command committed until the server acknowledges it
 
 Core records:
 
-- `Game`: id, five-digit code, status, settings, creator profile id, created/updated timestamps.
+- `Game`: id, five-digit code, status, settings, creator profile id (optional — console-created games record console origin instead, ADR 0002), created/updated timestamps.
 - `GameSettings`: currency, default buy-in cents, default stack, small blind, big blind, strict mode, raise rule, amount step setting.
 - `PlayerProfile`: host-owned reusable local profile.
 - `GamePlayer`: profile link, seat index, stack, status, connection state, buy-ins, sit-out preference.
@@ -151,7 +155,7 @@ Initial event families:
 - Pots: `pot-created`, `pot-awarded`, `pot-split`, `uncalled-bet-returned` (Decision Log 2026-07-02: the uncalled portion of a bet returns to the bettor and stays auditable — at showdown entry and, since Slice 10, on uncontested wins).
 - Recovery: `undo-committed`, `correction-committed`, `folded-player-restored`, `active-player-set` (named correction tools, Slice 10).
 - Sit-out: `sat-out`, `returned-from-sit-out` (Slice 10).
-- Money: `buy-in-recorded`, `rebuy-recorded`, `cash-out-finalized`.
+- Money: `buy-in-recorded`, `rebuy-recorded`, `cash-out-finalized`. (ADR 0002: a first buy-in must equal the table default and is triggered by the player's explicit confirmation after claiming a seat; rebuys are capped at the default. The domain rejects violations.)
 
 Each event should include:
 
@@ -437,12 +441,28 @@ At cash-out:
 
 ## Client Architecture
 
+The client splits into two surfaces by route, never by device detection
+(ADR 0002, SPEC.md Device Model): the table console at `/console` (table
+lifecycle: create, configure, share QR all night, first dealer, overview,
+history, stats) and the player surfaces at `/` (landing: join by code,
+active-tables list) and `/g/<code>` (profile → seat → buy-in confirmation
+→ play). No player surface can create a table.
+
+`POST /api/games` no longer requires a profile (ADR 0002): the console
+creates a table with no `creatorProfileId` at all, and the audit records
+console origin (null) instead of a creator; a profile supplied but unknown
+is still rejected. `GET /api/games` lists non-finished tables — `{code,
+status, seatedCount, createdAt}` each, oldest first — for the player
+landing's active-tables list.
+
 Primary views:
 
-- Host share/setup.
+- Console: table creation/settings, permanent share card, seated overview, first-dealer pick.
+- Player landing: join by code, active-tables list.
 - Join/profile/seat claim.
+- Buy-in confirmation.
 - Phone live table.
-- Table action drawer.
+- Table action drawer (includes mid-game share card).
 - Settlement.
 - Cash-out.
 - History/stats.
@@ -522,6 +542,7 @@ Domain tests:
 - Split allocation.
 - Undo visible transaction.
 - Rebuy timing.
+- First buy-in equals the table default; rebuy at most the default (ADR 0002).
 - Cash-out rounding and transfer minimization.
 
 Persistence tests:
@@ -550,8 +571,8 @@ UI tests:
 
 Manual QA:
 
-- Host starts server and shares QR.
-- Phone joins over LAN.
+- Host starts server; the console opens, creates the table, and shows the QR.
+- Phone joins over LAN, claims a seat, and confirms the buy-in.
 - Complete one normal hand.
 - Complete one all-in side-pot hand.
 - Restart server and recover active game.

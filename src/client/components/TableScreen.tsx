@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import type { GameSnapshot } from '../../shared/schema/snapshot'
-import { getUndoPreview } from '../api'
+import { getServerInfo, getUndoPreview } from '../api'
 import { ActionPanel } from './ActionPanel'
 import { LiveTable } from './LiveTable'
 import { ManageDrawer } from './ManageDrawer'
@@ -46,6 +46,7 @@ export function TableScreen({ snapshot, mySeat, error, onCommand }: TableScreenP
           onCommand={onCommand}
           onClose={() => setManageOpen(false)}
           loadUndoPreview={() => getUndoPreview(snapshot.game.code)}
+          loadServerInfo={getServerInfo}
         />
       ) : null}
 

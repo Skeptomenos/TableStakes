@@ -1,45 +1,36 @@
 import { useState } from 'react'
 
-import type { GameSettings, GameSnapshot } from '../../shared/schema/snapshot'
-import { bySeatOrder } from '../view-helpers'
+import type { GameSettings } from '../../shared/schema/snapshot'
 
-export interface SetupPayload {
-  settings: {
-    currency: string
-    defaultBuyInCents: number
-    defaultStack: number
-    smallBlind: number
-    bigBlind: number
-    strictMode: boolean
-    raiseRule: GameSettings['raiseRule']
-    amountStep: { kind: 'follow-small-blind' }
-  }
-  dealerSeat: number
+export interface ConsoleSettingsPayload {
+  currency: string
+  defaultBuyInCents: number
+  defaultStack: number
+  smallBlind: number
+  bigBlind: number
+  strictMode: boolean
+  raiseRule: GameSettings['raiseRule']
+  amountStep: { kind: 'follow-small-blind' }
 }
 
-export interface SetupFormProps {
-  snapshot: GameSnapshot
-  onStart(payload: SetupPayload): void
+export interface ConsoleCreateFormProps {
+  onCreate(settings: ConsoleSettingsPayload): void
 }
 
 /**
- * First-hand setup: one compact screen, not a wizard (SPEC.md). Shows the
- * money-to-chip relationship directly; chips are never labeled as the
- * currency. Dealer is a single selection; strict mode defaults off. The
- * raise rule stays out of setup (game settings own it later).
+ * The console's table-settings form (ADR 0002, DESIGN.md Console
+ * table-settings fields): settings only — no dealer pick and no buy-ins
+ * here, both moved to their own phases (console dealer pick once 2+
+ * players buy in; phone-side buy-in confirmation). Reuses the SetupForm
+ * field set and money-to-chip ratio line.
  */
-export function SetupForm({ snapshot, onStart }: SetupFormProps) {
+export function ConsoleCreateForm({ onCreate }: ConsoleCreateFormProps) {
   const [currency, setCurrency] = useState('EUR')
   const [buyIn, setBuyIn] = useState(10)
   const [stack, setStack] = useState(1000)
   const [smallBlind, setSmallBlind] = useState(50)
   const [bigBlind, setBigBlind] = useState(100)
   const [strictMode, setStrictMode] = useState(false)
-  const [dealerSeat, setDealerSeat] = useState<number | null>(
-    snapshot.game.dealerSeat,
-  )
-
-  const players = bySeatOrder(snapshot.players)
 
   const number = (value: string, fallback: number) => {
     const parsed = Number(value)
@@ -47,8 +38,8 @@ export function SetupForm({ snapshot, onStart }: SetupFormProps) {
   }
 
   return (
-    <section className="card" aria-label="First-hand setup">
-      <h2 className="card__title">First-hand setup</h2>
+    <section className="card" aria-label="Table settings">
+      <h2 className="card__title">Table settings</h2>
 
       <div className="field-grid">
         <label className="field">
@@ -110,43 +101,23 @@ export function SetupForm({ snapshot, onStart }: SetupFormProps) {
         {buyIn} {currency} = {stack} chips
       </p>
 
-      <fieldset className="dealer-select">
-        <legend>Dealer</legend>
-        {players.map((player) => (
-          <label key={player.id} className="dealer-select__row">
-            <input
-              type="radio"
-              name="dealer"
-              checked={dealerSeat === Number(player.seatIndex)}
-              onChange={() => setDealerSeat(Number(player.seatIndex))}
-            />
-            <span>{player.name}</span>
-          </label>
-        ))}
-      </fieldset>
-
       <button
         type="button"
         className="button button--primary"
-        disabled={dealerSeat === null || players.length < 2}
-        onClick={() => {
-          if (dealerSeat === null) return
-          onStart({
-            settings: {
-              currency,
-              defaultBuyInCents: Math.round(buyIn * 100),
-              defaultStack: stack,
-              smallBlind,
-              bigBlind,
-              strictMode,
-              raiseRule: 'any',
-              amountStep: { kind: 'follow-small-blind' },
-            },
-            dealerSeat,
+        onClick={() =>
+          onCreate({
+            currency,
+            defaultBuyInCents: Math.round(buyIn * 100),
+            defaultStack: stack,
+            smallBlind,
+            bigBlind,
+            strictMode,
+            raiseRule: 'any',
+            amountStep: { kind: 'follow-small-blind' },
           })
-        }}
+        }
       >
-        Start Game
+        Create Table
       </button>
     </section>
   )

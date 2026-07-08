@@ -141,7 +141,9 @@ export const GameRecord = Schema.Struct({
   code: GameCode,
   status: GameStatus,
   settings: GameSettings,
-  creatorProfileId: ProfileId,
+  // Null for console-created tables: creating a game no longer requires a
+  // profile — the audit records console origin instead (ADR 0002).
+  creatorProfileId: Schema.NullOr(ProfileId),
   // Dealer position between hands: set in setup, advanced after each
   // settled hand (skipping busted/empty/sitting-out seats), unchanged by
   // cancel-hand. Null until setup selects a dealer.

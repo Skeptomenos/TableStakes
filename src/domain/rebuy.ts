@@ -32,6 +32,18 @@ export function recordRebuy(
   const invalid = validateMoney(snapshot, money, chips)
   if (invalid) return invalid
 
+  // ADR 0002: a rebuy is capped at the table default (money and chips) —
+  // any amount above zero up to the default. The rebuy screen offers
+  // Full / Half / Custom, all of which fit under this cap.
+  const { defaultBuyInCents, defaultStack } = snapshot.game.settings
+  if (money.cents > defaultBuyInCents || chips > defaultStack) {
+    return err(
+      new InvalidAction({
+        reason: `rebuy is capped at the table default (${defaultBuyInCents} cents / ${defaultStack} chips)`,
+      }),
+    )
+  }
+
   const player = snapshot.players.find((p) => p.id === playerIdRaw)
   if (!player) {
     return err(new InvalidAction({ reason: 'unknown player for rebuy' }))

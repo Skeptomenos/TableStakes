@@ -4,14 +4,16 @@ export interface GameRow {
   gameId: string
   code: string
   status: string
-  creatorProfileId: string
+  // Null for console-created tables (ADR 0002): creating a game no longer
+  // requires a profile; the audit records console origin instead.
+  creatorProfileId: string | null
   createdAt: number
   updatedAt: number
 }
 
 export interface CreateGameOptions {
   gameId: string
-  creatorProfileId: string
+  creatorProfileId: string | null
   /** Five-digit code generator; deterministic in tests. */
   generateCode: () => string
   maxAttempts?: number
@@ -86,7 +88,7 @@ function toRow(row: Record<string, unknown>): GameRow {
     gameId: row.game_id as string,
     code: row.code as string,
     status: row.status as string,
-    creatorProfileId: row.creator_profile_id as string,
+    creatorProfileId: row.creator_profile_id as string | null,
     createdAt: row.created_at as number,
     updatedAt: row.updated_at as number,
   }

@@ -51,7 +51,8 @@ tests/
     persistence-restore.test.ts
     realtime-socket.test.ts
   e2e/
-    create-join-setup.spec.ts
+    console-create.spec.ts
+    join-buy-in.spec.ts
     normal-hand.spec.ts
     side-pot-settlement.spec.ts
     reconnect-recovery.spec.ts
@@ -96,6 +97,7 @@ Integration tests run real services against a real temporary SQLite database:
 - Five-digit code collision regeneration.
 - Host-owned player profile creation, rename, and game-seat linking.
 - Rebuy timing and active-hand eligibility protection.
+- Money rules (ADR 0002): first buy-in must equal the table default; rebuy amounts capped at the default; profile-optional game creation records its origin.
 - Strict-mode, raise-rule, and blind changes audited and applied from the next hand.
 - Cancel-hand full refund including blinds without button advance.
 - Game reset to setup with stacks equal to purchased chips.
@@ -126,11 +128,13 @@ Browser E2E covers user-visible workflows in desktop host and phone portrait con
 
 Browser E2E should drive the running app and verify visible behavior from the user's point of view. Tests should be documented as repeatable scenarios even when the execution harness is agent-driven rather than a committed browser-test package. If a committed harness is used, wire its smoke suite into `pnpm validate`.
 
-Minimum MVP E2E flows:
+Minimum MVP E2E flows (ADR 0002 surface split):
 
-- Host creates a game with a selected profile, sees QR/full URL/five-digit code/LAN hints.
-- Player opens `/g/<code>`, creates or selects a profile, and claims a seat.
-- A player completes first-hand setup with `10 EUR = 1000 chips`, blinds, seats, dealer, and strict mode default off.
+- Console (`/console`) creates a table with `10 EUR = 1000 chips`, blinds, and strict mode default off; sees QR/full URL/five-digit code/LAN hints permanently.
+- Player opens `/g/<code>`, creates or selects a profile, claims a seat, and confirms the fixed default buy-in.
+- Second device: lands on the player landing (`/`) while a table exists, joins it from the active-tables list, and sees the first player's taken seat.
+- No player surface offers table creation; a first buy-in differing from the default and a rebuy above the default are rejected.
+- With two players bought in, the first dealer is picked and the first hand starts (console-primary, any client allowed).
 - Normal hand: blinds post, players check/call/raise/fold, street advances, pot is awarded, next hand advances dealer/blinds.
 - Soft-mode below-minimum exact raise with the `Double` or `Standard NLHE` rule active: warning appears, commit is allowed.
 - Strict-mode below-minimum exact raise: commit is blocked.
@@ -145,7 +149,7 @@ Browser E2E should run phone portrait viewports for live gameplay. Landscape sho
 
 E2E visual checks should assert structure and behavior first, not pixel-perfect styling. `DESIGN.md` is the visual contract for MVP implementation.
 
-Pixel-level visual regression snapshots are explicitly DEFERRED past MVP (Slice 12 decision): the committed Playwright specs assert visible structure and behavior for join/seat selection, setup, live table, settlement, and cash-out, and per-slice agent-driven visual dogfood against `DESIGN.md` covered the styling. Screenshot baselines would be brittle while the design still moves; revisit once the UI stabilizes post-MVP.
+Pixel-level visual regression snapshots are explicitly DEFERRED past MVP (Slice 12 decision): the committed Playwright specs assert visible structure and behavior for the console, player landing, join/seat selection, buy-in confirmation, live table, settlement, and cash-out, and per-slice agent-driven visual dogfood against `DESIGN.md` covered the styling. Screenshot baselines would be brittle while the design still moves; revisit once the UI stabilizes post-MVP.
 
 Visual checks should verify that core controls fit in a phone portrait viewport without live-hand scrolling.
 

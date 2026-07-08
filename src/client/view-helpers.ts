@@ -13,3 +13,13 @@ export function formatCents(cents: number): string {
 export function formatNetCents(cents: number): string {
   return cents > 0 ? `+${formatCents(cents)}` : formatCents(cents)
 }
+
+/**
+ * Whole-currency-unit amount for the money-to-chip ratio line (SPEC.md,
+ * DESIGN.md: `10 EUR = 1000 chips`, not `10.00 EUR = 1000 chips`). Drops
+ * the decimal for whole amounts; keeps it for fractional cents.
+ */
+export function formatMoneyUnits(cents: number): string {
+  const units = cents / 100
+  return Number.isInteger(units) ? String(units) : units.toFixed(2)
+}

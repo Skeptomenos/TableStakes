@@ -65,6 +65,23 @@ const MIGRATIONS: string[] = [
     payload TEXT NOT NULL
   );
   `,
+  // ADR 0002: creating a game no longer requires a profile — console
+  // origin is recorded instead of a creator. SQLite has no ALTER COLUMN,
+  // so the games table is rebuilt with a nullable creator_profile_id.
+  `
+  ALTER TABLE games RENAME TO games_v0;
+  CREATE TABLE games (
+    game_id TEXT PRIMARY KEY,
+    code TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL DEFAULT 'setup',
+    creator_profile_id TEXT,
+    created_at INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
+  );
+  INSERT INTO games (game_id, code, status, creator_profile_id, created_at, updated_at)
+    SELECT game_id, code, status, creator_profile_id, created_at, updated_at FROM games_v0;
+  DROP TABLE games_v0;
+  `,
 ]
 
 export function migrate(db: AppDatabase): { from: number; to: number } {

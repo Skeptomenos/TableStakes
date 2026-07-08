@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import express, { type Express } from 'express'
 
-import { APP_NAME, GAME_ROUTE_PREFIX, HEALTH_ROUTE } from '../shared/routes'
+import { APP_NAME, CONSOLE_ROUTE, GAME_ROUTE_PREFIX, HEALTH_ROUTE } from '../shared/routes'
 import type { GameService } from './game-service'
 import { lanAddresses } from './lan'
 import { noopLogger, truncateSessionId, type Logger, type LogLevel } from './logger'
@@ -147,8 +147,9 @@ export function createHttpApp(options: CreateHttpAppOptions = {}): Express {
     res.status(201).json(service.createProfile(name))
   })
 
-  // Game creation requires selecting or creating a profile; the creator is
-  // recorded for audit only — no privileged role exists (SPEC.md).
+  // Games are created from the console; no profile is required (ADR 0002,
+  // SPEC.md). When a profile is supplied it is recorded for audit only —
+  // no privileged role exists — and an unknown one is still rejected.
   app.post('/api/games', (req, res) => {
     const service = options.getService?.()
     if (!service) {
@@ -159,16 +160,24 @@ export function createHttpApp(options: CreateHttpAppOptions = {}): Express {
       typeof req.body?.creatorProfileId === 'string'
         ? req.body.creatorProfileId
         : undefined
-    if (!creatorProfileId) {
-      res.status(400).json({ error: 'creatorProfileId is required' })
-      return
-    }
     try {
       const game = service.createGame({ creatorProfileId })
       res.status(201).json(game)
     } catch {
       res.status(400).json({ error: 'unknown creator profile' })
     }
+  })
+
+  // Player landing's tap-to-join list (ADR 0002): active tables with
+  // seated counts so a second device finds the existing table instead of
+  // seeing ten empty seats at a table of its own.
+  app.get('/api/games', (_req, res) => {
+    const service = options.getService?.()
+    if (!service) {
+      res.status(503).json({ error: 'service unavailable' })
+      return
+    }
+    res.json({ games: service.listGames() })
   })
 
   app.get('/api/games/:code', (req, res) => {
@@ -239,13 +248,18 @@ export function createHttpApp(options: CreateHttpAppOptions = {}): Express {
 
   app.use(express.static(clientDir, { index: 'index.html' }))
 
-  // SPA fallback: the client router owns / and /g/<code>.
+  // SPA fallback: the client router owns /, /g/<code>, and /console
+  // (ADR 0002: the table console is a third top-level route).
   app.use((req, res, next) => {
     if (req.method !== 'GET') {
       next()
       return
     }
-    if (req.path !== '/' && !req.path.startsWith(GAME_ROUTE_PREFIX)) {
+    if (
+      req.path !== '/' &&
+      req.path !== CONSOLE_ROUTE &&
+      !req.path.startsWith(GAME_ROUTE_PREFIX)
+    ) {
       next()
       return
     }
