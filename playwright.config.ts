@@ -5,11 +5,18 @@ const port = 4173
 // Committed Playwright harness (Decision Log 2026-07-02: browser E2E is
 // tool-agnostic; Playwright chosen for the package-runnable smoke suite).
 // The webServer boots the BUILT artifact, matching the smoke fidelity rule.
+//
+// baseURL uses a hostname Chromium treats as a non-secure origin, not
+// 127.0.0.1 — every real player device reaches this app over plain HTTP
+// on a LAN IP, an insecure context (ARCHITECTURE.md Client Architecture >
+// Insecure Contexts). --host-resolver-rules maps it to loopback inside
+// Chromium only; the webServer below still binds/polls 127.0.0.1:PORT in
+// Node, unaffected by the browser-side resolver override.
 export default defineConfig({
   testDir: 'tests/e2e',
   timeout: 30_000,
   use: {
-    baseURL: `http://127.0.0.1:${port}`,
+    baseURL: `http://insecure.test:${port}`,
   },
   projects: [
     {
@@ -19,6 +26,9 @@ export default defineConfig({
         // Chromium engine override: only chromium is installed locally.
         ...devices['iPhone 14'],
         browserName: 'chromium',
+        launchOptions: {
+          args: ['--host-resolver-rules=MAP insecure.test 127.0.0.1'],
+        },
       },
     },
   ],

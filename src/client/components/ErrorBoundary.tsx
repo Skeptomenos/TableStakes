@@ -35,7 +35,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         <section className="app-shell__body">
           <div className="card" role="alert">
             <h2 className="card__title">Something went wrong</h2>
-            <p>The screen crashed. The error was reported to the host.</p>
+            <p>The screen crashed. The error was sent to the host log.</p>
             <button
               type="button"
               className="button button--primary"

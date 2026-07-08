@@ -459,6 +459,31 @@ Phone action panel:
 - Does not calculate authoritative chip movement.
 - Sends command with selected amount and client-visible transaction context.
 
+### Insecure Contexts
+
+Clients run in insecure contexts by design: the host serves plain HTTP over
+the LAN (no internet dependency), and every phone that scans the join QR
+code reaches it as `http://<lan-ip>:<port>`. HTTPS with a self-signed
+certificate was considered and rejected — certificate interstitials on
+every guest phone would break the scan-and-play onboarding promise.
+
+Consequence: secure-context-only browser APIs (`crypto.randomUUID`,
+`navigator.clipboard`, `navigator.share`, `navigator.wakeLock`,
+`navigator.serviceWorker`, and any future addition to that family) are
+`undefined` on every real player device, even though they work on
+`localhost` during development. Code must never call one of these directly
+without an explicit insecure-context fallback.
+
+- `uuid()` in `src/client/uuid.ts` is the mandated ID source — it falls
+  back to `crypto.getRandomValues` when `crypto.randomUUID` is absent.
+- An ESLint `no-restricted-properties` rule (`eslint.config.js`, scoped to
+  `src/client/**`) fails `pnpm lint` on direct use of any API in this
+  family outside `src/client/uuid.ts`, so a violation is caught before the
+  gate rather than on a real phone.
+- The rule is syntactic and does not catch aliased or destructured member
+  access; the Playwright E2E suite runs against an insecure-context origin
+  as a runtime backstop for anything that evades it.
+
 ## Design System
 
 The selected design direction is Deep Stack Logic.

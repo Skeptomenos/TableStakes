@@ -33,18 +33,43 @@ export function logClient(
   if (level === 'error') flush()
 }
 
+// Telemetry must be strictly more robust than the code it observes: never
+// let the identity mechanism (sessionId -> localStorage -> uuid()) silence
+// a report. Insecure-context / storage-disabled clients still ship logs,
+// just with an anonymous session id.
+function safeSessionId(): string {
+  try {
+    return sessionId()
+  } catch {
+    return 'unknown'
+  }
+}
+
 function payload(entries: ClientLogEntry[]): string {
-  return JSON.stringify({ sessionId: sessionId(), gameCode, entries })
+  return JSON.stringify({ sessionId: safeSessionId(), gameCode, entries })
 }
 
 function flush(): void {
   if (buffer.length === 0) return
-  const entries = buffer.splice(0, MAX_BATCH)
+  // Serialize BEFORE splicing: if payload() throws (a poison-pill context
+  // object), the buffer must not have already lost these entries. Only a
+  // successful serialization earns the splice.
+  const entries = buffer.slice(0, MAX_BATCH)
+  let body: string
+  try {
+    body = payload(entries)
+  } catch {
+    // Unserializable batch: drop it rather than wedge the queue forever,
+    // but only after failing to build the body — never before.
+    buffer.splice(0, entries.length)
+    return
+  }
+  buffer.splice(0, entries.length)
   try {
     void fetch('/api/client-logs', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: payload(entries),
+      body,
     }).catch(() => {})
   } catch {
     // Never let log shipping break the client.
@@ -71,12 +96,20 @@ export function initClientLogging(): void {
   })
   window.addEventListener('pagehide', () => {
     if (buffer.length === 0) return
-    const entries = buffer.splice(0, MAX_BATCH)
+    const entries = buffer.slice(0, MAX_BATCH)
+    let body: string
     try {
-      navigator.sendBeacon(
-        '/api/client-logs',
-        new Blob([payload(entries)], { type: 'application/json' }),
-      )
+      body = payload(entries)
+    } catch {
+      buffer.splice(0, entries.length)
+      return
+    }
+    buffer.splice(0, entries.length)
+    try {
+      // sendBeacon returning false (queue full / body too large) is
+      // accepted loss: the page is already unloading, there is no retry
+      // opportunity left.
+      navigator.sendBeacon('/api/client-logs', new Blob([body], { type: 'application/json' }))
     } catch {
       // best effort only
     }
