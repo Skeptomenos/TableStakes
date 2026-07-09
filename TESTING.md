@@ -81,6 +81,8 @@ Unit tests cover pure domain logic with deterministic inputs and no database or 
 - Multiple all-in thresholds.
 - Uncontested final-fold auto-award transaction.
 - Split allocation and remaining-unallocated calculation.
+- Even-split allocation engine (ADR 0003): N-way division, deterministic odd-chip distribution from the earliest seat after the dealer, zero-sum adjustments never breaking full allocation.
+- Needs-rebuy gating (ADR 0003): prompt card shown only to the needs-rebuy hero; `Next Hand` disabled with a reason while fewer than two seated players have chips.
 - Transaction-level undo grouping.
 - Cash-out rounding and minimized transfers.
 

@@ -425,10 +425,13 @@ Pot-by-pot settlement:
 - Side pots settle independently.
 - Settlement proceeds top-to-bottom as shown on the table.
 
-Split pot:
+Split pot (ADR 0003):
 
+- The split view opens with a chop selection: checkboxes over the pot's eligible players.
+- Selecting players allocates the pot evenly among them immediately. Integer remainders go one chip at a time to the selected players in seat order starting from the earliest seat after the dealer button (deterministic).
+- Adjustments are zero-sum and keep the pot 100% allocated: with exactly two selected players a single slider shifts chips between the two shares; with three or more, per-player increase/decrease steps in the table's amount step pull from or push to the largest other share.
+- Exact chip inputs remain available as a fallback, pre-filled with the even split.
 - Exact chip amounts are the committed value.
-- Optional slider assistance is allowed.
 - UI must show live remaining-unallocated chips.
 - Commit is allowed only when remaining unallocated amount is zero.
 
@@ -438,6 +441,8 @@ After all pots are settled:
 - Dealer button advances.
 - Blind positions advance.
 - Zero-chip players become sitting out or needs rebuy unless they rebuy before the next hand starts.
+- A needs-rebuy player is prompted on their own device (ADR 0003): a card offers a one-tap rebuy at exactly the table default (confirmation required), a smaller custom-rebuy action that opens the rebuy screen preselected to that player, and sit out.
+- `Next Hand` is disabled with a stated reason whenever fewer than two seated players have chips — the same rule the domain enforces, surfaced before the tap instead of as a rejection after it.
 
 ## Undo And Corrections
 
@@ -538,6 +543,7 @@ Zero-chip player:
 - Keeps seat, profile, and history.
 - Is marked sitting out or needs rebuy after hand settlement.
 - Is skipped for blinds and action until rebuy.
+- Sees the needs-rebuy prompt card on their own device between hands (ADR 0003); every other player sees a `Needs rebuy` status pill on that player's card.
 
 Any connected player can finish the game and start end-of-night cash-out, with confirmation.
 

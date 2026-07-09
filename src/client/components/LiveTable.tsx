@@ -56,6 +56,14 @@ function statusFor(
   if (player.connection === 'interrupted') {
     return { label: 'Interrupted', kind: 'warn' }
   }
+  // Busted-player pause (ADR 0003): the whole table sees why the game is
+  // paused, not just the busted player. Ranks above the turn states —
+  // needs-rebuy is never actually an active seat in practice (the domain
+  // excludes zero-stack players from the next deal), but the priority is
+  // still checked here first per DESIGN.md's pill priority line.
+  if (player.handStatus === 'needs-rebuy') {
+    return { label: 'Needs rebuy', kind: 'warn' }
+  }
   const hand = snapshot.hand
   if (hand?.activeSeat === player.seatIndex) {
     return player.seatIndex === mySeat

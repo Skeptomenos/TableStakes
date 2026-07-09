@@ -237,7 +237,7 @@ Player cards (fixed 96×64):
 
 - Player name (truncating), mono stack, muted mono `Bet <amount>` line.
 - **Dealer/blind pucks float on the top-left corner**: 21px circles with a dashed inner ring and lift shadow — D is an ivory puck (like the real button), SB/BB are rimmed dark chips. Pucks are amount-less; blind amounts live in the action-bar context line.
-- **ONE status pill hovers centered over the bottom border**: priority Interrupted (amber) > Your Turn/Thinking (emerald-deep with emerald ring) > All-in (claret) > Folded (hairline on felt) > ⏸ Sitting out (outlined muted).
+- **ONE status pill hovers centered over the bottom border**: priority Interrupted (amber) > Needs rebuy (amber, ADR 0003 — the whole table sees why the game is paused) > Your Turn/Thinking (emerald-deep with emerald ring) > All-in (claret) > Folded (hairline on felt) > ⏸ Sitting out (outlined muted).
 - The hero card is felt-850, scaled 1.15× about its center (layout box unchanged), with an emerald border + soft glow when it is your turn.
 - Folded players dim to 55% opacity and lose stack weight — state is opacity + shape, not just a chip.
 
@@ -325,12 +325,17 @@ Required structure:
 - Selected winner rows with initials/avatar, name, and eligibility.
 - `Take All Eligible` action only after a winner is selected and only when that player can receive every unresolved pot.
 - Settled pots show a clear `Settled` status.
-- Split mode labels `Split Pot` and shows exact chip amount inputs.
+- Split mode labels `Split Pot` and opens with a chop selection: one checkbox row per eligible player (ADR 0003).
+- Selecting players allocates the pot evenly at once (odd chips to the earliest seats after the dealer); the shares render immediately, never zeros.
+- Two selected players: a single zero-sum slider between the two shares. Three or more: per-player `−`/`+` steppers in the table's amount step, pulling from the largest other share. The pot stays 100% allocated through every adjustment.
+- Exact chip inputs remain as the fallback, pre-filled with the even split.
 - Split mode shows live remaining-unallocated feedback: `Remaining Unallocated:` or `Remaining:`.
 - Split mode includes `Cancel` and `Confirm Split`.
-- `Next Hand` remains disabled until every pot is settled.
+- `Next Hand` remains disabled until every pot is settled, and stays disabled with a one-line stated reason while fewer than two seated players have chips ("Waiting for players to rebuy" — ADR 0003, same disabled-reason pattern as Review Rebuy).
 
 Settlement interactions require confirmation before chip movement is committed.
+
+Needs-rebuy prompt (ADR 0003): between hands, a player whose own seat is `needs-rebuy` sees a card over the idle action-panel area — "You're out of chips." with a primary one-tap `Rebuy <default> → <stack> chips` (confirm sheet), a smaller `Custom rebuy` secondary opening the Manage drawer's rebuy view preselected to that player, and `Sit out`. A card with choices, never a blocking modal.
 
 ## Cash-Out And History
 

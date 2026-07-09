@@ -27,6 +27,14 @@ export interface ManageDrawerProps {
   loadUndoPreview(): Promise<UndoPreview | null>
   /** LAN reachability for the mid-game share view (SPEC.md: reachable all night). */
   loadServerInfo(): Promise<DrawerServerInfo>
+  /**
+   * Deep-link support (ADR 0003): the needs-rebuy prompt card's "Custom
+   * rebuy" opens the drawer directly on the rebuy view instead of the
+   * menu. Omitted/undefined preserves today's default menu-first behavior.
+   */
+  initialView?: View
+  /** Preselects this player in the rebuy view when initialView is 'rebuy'. */
+  initialRebuyPlayerId?: string
 }
 
 type CorrectionTargetValue = `player:${string}` | `pot:${string}`
@@ -69,8 +77,10 @@ export function ManageDrawer({
   onClose,
   loadUndoPreview,
   loadServerInfo,
+  initialView,
+  initialRebuyPlayerId,
 }: ManageDrawerProps) {
-  const [view, setView] = useState<View>('menu')
+  const [view, setView] = useState<View>(initialView ?? 'menu')
   const [confirming, setConfirming] = useState<Confirming>(null)
   const [undoNote, setUndoNote] = useState<string | null>(null)
   const [serverInfo, setServerInfo] = useState<DrawerServerInfo | null>(null)
@@ -291,6 +301,7 @@ export function ManageDrawer({
         {view === 'rebuy' ? (
           <RebuyForm
             snapshot={snapshot}
+            initialPlayerId={initialRebuyPlayerId}
             onReview={(player, chips, cents) =>
               setConfirming({
                 kind: 'rebuy',
@@ -502,9 +513,11 @@ type RebuyPick = 'full' | 'half' | 'custom'
  */
 function RebuyForm({
   snapshot,
+  initialPlayerId,
   onReview,
 }: {
   snapshot: GameSnapshot
+  initialPlayerId?: string
   onReview(player: GamePlayer, chips: number, cents: number): void
 }) {
   const players = bySeatOrder(snapshot.players)
@@ -516,7 +529,7 @@ function RebuyForm({
   // player by up to one chip for no reason.
   const halfChips = Math.round(cap / 2)
 
-  const [playerId, setPlayerId] = useState(players[0]?.id ?? '')
+  const [playerId, setPlayerId] = useState(initialPlayerId ?? players[0]?.id ?? '')
   const [pick, setPick] = useState<RebuyPick>('full')
   const [customChips, setCustomChips] = useState<number>(cap)
   const player = players.find((p) => p.id === playerId)

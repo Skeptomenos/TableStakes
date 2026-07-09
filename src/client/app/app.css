@@ -564,6 +564,28 @@ body {
   text-align: center;
 }
 
+/* Needs-rebuy hero prompt (ADR 0003): a card with choices over the idle
+   action-panel area, never a blocking modal — amber accent on the title
+   matches the warning-state vocabulary (Interrupted, Needs rebuy pill). */
+.rebuy-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rebuy-prompt .card__title {
+  color: var(--amber-400);
+}
+
+.rebuy-prompt__secondary {
+  font-size: 13px;
+}
+
+.rebuy-prompt__tertiary {
+  font-size: 13px;
+  color: var(--ivory-dim);
+}
+
 .table-area {
   position: relative;
   overflow: hidden;
@@ -1275,6 +1297,69 @@ body {
 
 .settlement__remaining--zero {
   color: var(--emerald-500);
+}
+
+/* --- Chop-selection split flow (ADR 0003) --- */
+
+.settlement__chop-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settlement__chop-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.settlement__chop-slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settlement__chop-slider input[type='range'] {
+  flex: 1;
+  accent-color: var(--emerald-500);
+  min-height: 40px;
+}
+
+.settlement__chop-slider-name {
+  font-size: 12px;
+  color: var(--ivory-dim);
+  white-space: nowrap;
+}
+
+.settlement__chop-steppers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settlement__chop-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settlement__chop-stepper-name {
+  flex: 1;
+  font-size: 13px;
+}
+
+.settlement__chop-stepper-value {
+  min-width: 48px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.settlement__chop-exact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 /* --- Landscape rotate prompt (SPEC.md Device Model) --- */

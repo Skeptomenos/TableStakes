@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 
 import type { GamePlayer, GameSnapshot, Pot } from '../../shared/schema/snapshot'
+import { adjust, evenSplit } from '../split-allocation'
 import { bySeatOrder } from '../view-helpers'
 import { ConfirmSheet } from './ConfirmSheet'
 
@@ -26,9 +27,19 @@ export function SettlementScreen({ snapshot, onCommand }: SettlementScreenProps)
   const pots = snapshot.pots
   const firstPot = pots[0] ?? null
   const total = pots.reduce((sum, pot) => sum + pot.amount, 0)
+  const dealerSeat = snapshot.hand?.dealerSeat ?? snapshot.game.dealerSeat ?? 0
+  const step = Math.max(
+    1,
+    snapshot.game.settings.amountStep.kind === 'fixed'
+      ? snapshot.game.settings.amountStep.chips
+      : snapshot.game.settings.amountStep.kind === 'follow-big-blind'
+        ? snapshot.game.settings.bigBlind
+        : snapshot.game.settings.smallBlind,
+  )
 
   const [winnerId, setWinnerId] = useState<string | null>(null)
   const [splitOpen, setSplitOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [allocations, setAllocations] = useState<Record<string, number>>({})
   const [confirming, setConfirming] = useState<Confirmation>(null)
 
@@ -83,18 +94,51 @@ export function SettlementScreen({ snapshot, onCommand }: SettlementScreenProps)
         ),
       )
     : []
-  const allocated = splitPlayers.reduce(
+  const selectedPlayers = splitPlayers.filter((p) => selectedIds.has(p.id))
+  const allocated = selectedPlayers.reduce(
     (sum, p) => sum + (allocations[p.id] ?? 0),
     0,
   )
   const remaining = (firstPot?.amount ?? 0) - allocated
 
+  const toggleSplitPlayer = (playerId: string) => {
+    if (!firstPot) return
+    const nextSelected = new Set(selectedIds)
+    if (nextSelected.has(playerId)) nextSelected.delete(playerId)
+    else nextSelected.add(playerId)
+    setSelectedIds(nextSelected)
+    const seats = splitPlayers
+      .filter((p) => nextSelected.has(p.id))
+      .map((p) => ({ playerId: p.id, seatIndex: p.seatIndex }))
+    // Re-split evenly on every selection change (ADR 0003): shares always
+    // reflect the CURRENT selection, never a stale manual edit.
+    setAllocations(evenSplit(firstPot.amount, seats, dealerSeat))
+  }
+
+  const adjustSplit = (playerId: string, delta: number) => {
+    setAllocations((prev) => adjust(prev, playerId, delta, step))
+  }
+
+  const setExactAllocation = (playerId: string, value: number) => {
+    const clamped = Number.isFinite(value) && value >= 0 ? value : 0
+    setAllocations((prev) => ({ ...prev, [playerId]: clamped }))
+  }
+
   const submitSplit = () => {
-    if (!firstPot || remaining !== 0) return
-    const entries = splitPlayers
+    if (!firstPot || remaining !== 0 || selectedPlayers.length === 0) return
+    // The split-pot command requires every allocation's chips > 0
+    // (schema): a selected player manually adjusted down to exactly 0
+    // simply sends nothing, same as today's zero-amount behavior.
+    const entries = selectedPlayers
       .filter((p) => (allocations[p.id] ?? 0) > 0)
       .map((p) => ({ playerId: p.id, chips: allocations[p.id]! }))
     setConfirming({ kind: 'split', pot: firstPot, allocations: entries })
+  }
+
+  const closeSplit = () => {
+    setSplitOpen(false)
+    setSelectedIds(new Set())
+    setAllocations({})
   }
 
   return (
@@ -157,6 +201,7 @@ export function SettlementScreen({ snapshot, onCommand }: SettlementScreenProps)
                 type="button"
                 className="button"
                 onClick={() => {
+                  setSelectedIds(new Set())
                   setAllocations({})
                   setSplitOpen(true)
                 }}
@@ -167,26 +212,77 @@ export function SettlementScreen({ snapshot, onCommand }: SettlementScreenProps)
           ) : null}
           {row.pot && firstPot && row.pot.id === firstPot.id && splitOpen ? (
             <div className="settlement__split">
-              {splitPlayers.map((player) => (
-                <label key={player.id} className="field">
-                  <span>Split for {player.name}</span>
-                  <input
-                    className="input"
-                    type="number"
-                    min={0}
-                    aria-label={`Split for ${player.name}`}
-                    value={allocations[player.id] ?? 0}
-                    onChange={(e) => {
-                      const value = Number(e.target.value)
-                      setAllocations((prev) => ({
-                        ...prev,
-                        [player.id]:
-                          Number.isFinite(value) && value >= 0 ? value : 0,
-                      }))
-                    }}
-                  />
-                </label>
-              ))}
+              <div className="settlement__chop-select" role="group" aria-label="Chop selection">
+                {splitPlayers.map((player) => (
+                  <label key={player.id} className="settlement__chop-row">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(player.id)}
+                      onChange={() => toggleSplitPlayer(player.id)}
+                    />
+                    <span>{player.name}</span>
+                  </label>
+                ))}
+              </div>
+
+              {selectedPlayers.length === 2 ? (
+                <SplitSlider
+                  players={selectedPlayers}
+                  allocations={allocations}
+                  potAmount={firstPot.amount}
+                  step={step}
+                  onChange={setExactAllocation}
+                />
+              ) : null}
+              {selectedPlayers.length >= 3 ? (
+                <div className="settlement__chop-steppers">
+                  {selectedPlayers.map((player) => (
+                    <div key={player.id} className="settlement__chop-stepper">
+                      <span className="settlement__chop-stepper-name">{player.name}</span>
+                      <button
+                        type="button"
+                        className="button action-panel__step"
+                        aria-label={`Decrease ${player.name}'s share`}
+                        onClick={() => adjustSplit(player.id, -1)}
+                      >
+                        −
+                      </button>
+                      <span className="settlement__chop-stepper-value num">
+                        {allocations[player.id] ?? 0}
+                      </span>
+                      <button
+                        type="button"
+                        className="button action-panel__step"
+                        aria-label={`Increase ${player.name}'s share`}
+                        onClick={() => adjustSplit(player.id, 1)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {selectedPlayers.length > 0 ? (
+                <div className="settlement__chop-exact">
+                  {selectedPlayers.map((player) => (
+                    <label key={player.id} className="field">
+                      <span>Split for {player.name}</span>
+                      <input
+                        className="input"
+                        type="number"
+                        min={0}
+                        aria-label={`Split for ${player.name}`}
+                        value={allocations[player.id] ?? 0}
+                        onChange={(e) =>
+                          setExactAllocation(player.id, Number(e.target.value))
+                        }
+                      />
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+
               <p
                 className={
                   remaining === 0
@@ -197,17 +293,13 @@ export function SettlementScreen({ snapshot, onCommand }: SettlementScreenProps)
                 Remaining: {remaining}
               </p>
               <div className="settlement__actions">
-                <button
-                  type="button"
-                  className="button"
-                  onClick={() => setSplitOpen(false)}
-                >
+                <button type="button" className="button" onClick={closeSplit}>
                   Cancel
                 </button>
                 <button
                   type="button"
                   className="button button--primary"
-                  disabled={remaining !== 0}
+                  disabled={remaining !== 0 || selectedPlayers.length === 0}
                   onClick={submitSplit}
                 >
                   Confirm Split
@@ -272,6 +364,50 @@ export function SettlementScreen({ snapshot, onCommand }: SettlementScreenProps)
           }}
         />
       ) : null}
+    </div>
+  )
+}
+
+/**
+ * Exactly-2-selected chop adjustment (ADR 0003 Decision 1): one zero-sum
+ * slider between the two shares — moving it increases one side and
+ * decreases the other by the same amount, so the pot stays 100% allocated
+ * without a separate "adjust" call.
+ */
+function SplitSlider({
+  players,
+  allocations,
+  potAmount,
+  step,
+  onChange,
+}: {
+  players: GamePlayer[]
+  allocations: Record<string, number>
+  potAmount: number
+  step: number
+  onChange(playerId: string, value: number): void
+}) {
+  const [first, second] = players
+  if (!first || !second) return null
+  const firstShare = allocations[first.id] ?? 0
+
+  return (
+    <div className="settlement__chop-slider">
+      <span className="settlement__chop-slider-name">{first.name}</span>
+      <input
+        type="range"
+        aria-label={`${first.name}'s share`}
+        min={0}
+        max={potAmount}
+        step={step}
+        value={firstShare}
+        onChange={(e) => {
+          const value = Math.max(0, Math.min(potAmount, Number(e.target.value)))
+          onChange(first.id, value)
+          onChange(second.id, potAmount - value)
+        }}
+      />
+      <span className="settlement__chop-slider-name">{second.name}</span>
     </div>
   )
 }

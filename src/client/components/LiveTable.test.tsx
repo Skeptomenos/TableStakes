@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { confirmNextStreet } from '../../domain/reducers/hand-reducer'
 import { mustOk, played, runOutToShowdown, startedHand } from '../../domain/testing'
+import { makeChips } from '../../shared/chips'
 import { LiveTable } from './LiveTable'
 
 afterEach(cleanup)
@@ -101,6 +102,63 @@ describe('LiveTable', () => {
     render(<LiveTable snapshot={s} mySeat={(active + 1) % 3} />)
     expect(screen.getByText('Interrupted')).toBeTruthy()
     expect(screen.queryByText('Thinking')).toBeNull()
+  })
+
+  it('shows a Needs rebuy pill on a busted player (ADR 0003)', () => {
+    const base = startedHand({ playerCount: 3 })
+    const s = {
+      ...base,
+      players: base.players.map((p) =>
+        p.seatIndex === 1
+          ? { ...p, handStatus: 'needs-rebuy' as const, stack: makeChips(0) }
+          : p,
+      ),
+    }
+    render(<LiveTable snapshot={s} mySeat={0} />)
+    expect(screen.getByText('Needs rebuy')).toBeTruthy()
+  })
+
+  it('shows Interrupted over Needs rebuy when both apply (priority pin)', () => {
+    // DESIGN.md pill priority: Interrupted > Needs rebuy > turn states.
+    const base = startedHand({ playerCount: 3 })
+    const s = {
+      ...base,
+      players: base.players.map((p) =>
+        p.seatIndex === 1
+          ? {
+              ...p,
+              handStatus: 'needs-rebuy' as const,
+              stack: makeChips(0),
+              connection: 'interrupted' as const,
+            }
+          : p,
+      ),
+    }
+    render(<LiveTable snapshot={s} mySeat={0} />)
+    expect(screen.getByText('Interrupted')).toBeTruthy()
+    expect(screen.queryByText('Needs rebuy')).toBeNull()
+  })
+
+  it('shows Needs rebuy over Your Turn/Thinking on the active seat (priority pin)', () => {
+    // A needs-rebuy player is never actually dealt into a live hand in
+    // practice (the domain excludes zero-stack players from the next
+    // deal), but the pill priority itself must still rank needs-rebuy
+    // above the turn states per DESIGN.md — pin the ordering directly by
+    // staging a needs-rebuy status on the seat statusFor() marks active.
+    const base = startedHand({ playerCount: 3 })
+    const active = base.hand!.activeSeat!
+    const s = {
+      ...base,
+      players: base.players.map((p) =>
+        p.seatIndex === active
+          ? { ...p, handStatus: 'needs-rebuy' as const, stack: makeChips(0) }
+          : p,
+      ),
+    }
+    render(<LiveTable snapshot={s} mySeat={(active + 1) % 3} />)
+    expect(screen.getByText('Needs rebuy')).toBeTruthy()
+    expect(screen.queryByText('Thinking')).toBeNull()
+    expect(screen.queryByText('Your Turn')).toBeNull()
   })
 
   it('keeps card geometry fixed regardless of badges (design uplift)', () => {

@@ -148,14 +148,34 @@ test('side pots settle in display order with exact splits and Next Hand gating',
   // The main pot shows Settled; the side pot is now the actionable one.
   await expect(anna.getByText('Settled')).toBeVisible()
 
-  // Split the side pot 200/200 between Ben and Hosta with live feedback.
+  // Split the side pot between Ben and Hosta via the chop-selection flow
+  // (ADR 0003): checkbox both, get the instant even 200/200 split with zero
+  // mental arithmetic, adjust once via the 2-player slider to prove it
+  // stays zero-sum, then settle back on the even split.
   await ben.getByRole('button', { name: 'Split Pot' }).click()
   await expect(ben.getByText('Remaining: 400')).toBeVisible()
-  await ben.getByLabel('Split for Ben').fill('200')
-  await expect(ben.getByText('Remaining: 200')).toBeVisible()
-  await expect(ben.getByRole('button', { name: 'Confirm Split' })).toBeDisabled()
-  await ben.getByLabel('Split for Hosta').fill('200')
+  await ben.getByRole('checkbox', { name: 'Ben' }).check()
+  await ben.getByRole('checkbox', { name: 'Hosta' }).check()
+  // Auto-even split on selection: shares render immediately, never zero.
+  await expect(ben.getByLabel('Split for Ben')).toHaveValue('200')
+  await expect(ben.getByLabel('Split for Hosta')).toHaveValue('200')
   await expect(ben.getByText('Remaining: 0')).toBeVisible()
+  await expect(ben.getByRole('button', { name: 'Confirm Split' })).toBeEnabled()
+
+  // Exactly 2 selected: one zero-sum slider between the two shares. Range
+  // inputs cannot be `.fill()`ed in Playwright; step via keyboard (native
+  // range-input behavior moves by the `step` attribute per arrow press —
+  // the table's small blind, 50, per ADR 0003's amount-step resolution).
+  const hostaShare = ben.getByRole('slider', { name: "Hosta's share" })
+  await hostaShare.focus()
+  await ben.keyboard.press('ArrowRight')
+  await expect(ben.getByLabel('Split for Hosta')).toHaveValue('250')
+  await expect(ben.getByLabel('Split for Ben')).toHaveValue('150')
+  await expect(ben.getByText('Remaining: 0')).toBeVisible()
+  await ben.keyboard.press('ArrowLeft')
+  await expect(ben.getByLabel('Split for Hosta')).toHaveValue('200')
+  await expect(ben.getByText('Remaining: 0')).toBeVisible()
+
   await ben.getByRole('button', { name: 'Confirm Split' }).click()
   await ben.getByRole('button', { name: 'Yes, Split' }).click()
 

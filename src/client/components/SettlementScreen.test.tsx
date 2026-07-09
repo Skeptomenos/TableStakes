@@ -76,25 +76,41 @@ describe('SettlementScreen', () => {
     expect(String(command.potId)).toContain('main')
   })
 
-  it('splits with exact inputs, live remaining feedback, and a zero-remaining gate', () => {
+  it('opens split mode with a chop selection — checkboxes, no bare inputs pre-selection', () => {
+    renderScreen(twoPotShowdown())
+    fireEvent.click(screen.getByRole('button', { name: 'Split Pot' }))
+
+    // One checkbox per eligible player for the main pot; no exact inputs
+    // render until a player is selected (ADR 0003: selection-first).
+    expect(screen.getAllByRole('checkbox')).toHaveLength(3)
+    expect(screen.queryByRole('spinbutton')).toBeNull()
+    expect(screen.getByText('Remaining: 600')).toBeTruthy()
+  })
+
+  it('selecting players auto-allocates the pot evenly and zeroes remaining immediately', () => {
+    renderScreen(twoPotShowdown())
+    fireEvent.click(screen.getByRole('button', { name: 'Split Pot' }))
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Player 1/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /Player 2/ }))
+
+    // 600 / 2 divides evenly: both shares are prefilled at 300, never zero.
+    expect(
+      (screen.getByLabelText('Split for Player 1') as HTMLInputElement).value,
+    ).toBe('300')
+    expect(
+      (screen.getByLabelText('Split for Player 2') as HTMLInputElement).value,
+    ).toBe('300')
+    expect(screen.getByText('Remaining: 0')).toBeTruthy()
+  })
+
+  it('confirms split allocations for ONLY the selected players, summing to the pot', () => {
     const { onCommand } = renderScreen(twoPotShowdown())
     fireEvent.click(screen.getByRole('button', { name: 'Split Pot' }))
 
-    // Exact chip inputs for the three eligible players of the main pot.
-    expect(screen.getAllByRole('spinbutton')).toHaveLength(3)
-    expect(screen.getByText('Remaining: 600')).toBeTruthy()
-
-    fireEvent.change(screen.getByLabelText('Split for Player 1'), {
-      target: { value: '300' },
-    })
-    expect(screen.getByText('Remaining: 300')).toBeTruthy()
-    const confirmSplit = screen.getByRole('button', { name: 'Confirm Split' })
-    expect((confirmSplit as HTMLButtonElement).disabled).toBe(true)
-
-    fireEvent.change(screen.getByLabelText('Split for Player 2'), {
-      target: { value: '300' },
-    })
-    expect(screen.getByText('Remaining: 0')).toBeTruthy()
+    // Select 2 of the 3 eligible players; Player 3 stays unselected.
+    fireEvent.click(screen.getByRole('checkbox', { name: /Player 1/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /Player 2/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Split' }))
     expect(onCommand).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Yes, Split' }))
@@ -102,14 +118,52 @@ describe('SettlementScreen', () => {
     const command = onCommand.mock.calls[0]![0]
     expect(command._tag).toBe('split-pot')
     expect(command.allocations).toHaveLength(2)
-    expect(command.allocations[0].chips).toBe(300)
+    const total = command.allocations.reduce(
+      (sum: number, a: { chips: number }) => sum + a.chips,
+      0,
+    )
+    expect(total).toBe(600)
+    // Player 3 (seat index 2, unselected) must not receive an allocation.
+    expect(
+      command.allocations.map((a: { playerId: string }) => a.playerId),
+    ).not.toContain('player_s2')
+  })
+
+  it('exact fallback inputs are pre-filled with the even split and support manual adjustment', () => {
+    const { onCommand } = renderScreen(twoPotShowdown())
+    fireEvent.click(screen.getByRole('button', { name: 'Split Pot' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /Player 1/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /Player 2/ }))
+    // Pre-filled at the even split, not zero.
+    expect(
+      (screen.getByLabelText('Split for Player 1') as HTMLInputElement).value,
+    ).toBe('300')
+
+    fireEvent.change(screen.getByLabelText('Split for Player 1'), {
+      target: { value: '200' },
+    })
+    expect(screen.getByText('Remaining: 100')).toBeTruthy()
+    const confirmSplit = screen.getByRole('button', { name: 'Confirm Split' })
+    expect((confirmSplit as HTMLButtonElement).disabled).toBe(true)
+
+    fireEvent.change(screen.getByLabelText('Split for Player 2'), {
+      target: { value: '400' },
+    })
+    expect(screen.getByText('Remaining: 0')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Split' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, Split' }))
+
+    const command = onCommand.mock.calls[0]![0]
+    expect(command.allocations).toContainEqual({ playerId: expect.any(String), chips: 200 })
+    expect(command.allocations).toContainEqual({ playerId: expect.any(String), chips: 400 })
   })
 
   it('cancel leaves split mode without committing', () => {
     const { onCommand } = renderScreen(twoPotShowdown())
     fireEvent.click(screen.getByRole('button', { name: 'Split Pot' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /Player 1/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(screen.queryByRole('spinbutton')).toBeNull()
+    expect(screen.queryByRole('checkbox')).toBeNull()
     expect(onCommand).not.toHaveBeenCalled()
   })
 

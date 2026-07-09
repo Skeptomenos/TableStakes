@@ -19,6 +19,8 @@ function renderDrawer(
     mySeat?: number | null
     preview?: UndoPreview | null
     serverInfo?: { addresses: string[]; localhostOnly: boolean }
+    initialView?: 'menu' | 'rebuy' | 'correction' | 'settings' | 'share'
+    initialRebuyPlayerId?: string
   } = {},
 ) {
   const onCommand = vi.fn()
@@ -29,6 +31,8 @@ function renderDrawer(
       mySeat={options.mySeat ?? 0}
       onCommand={onCommand}
       onClose={onClose}
+      initialView={options.initialView}
+      initialRebuyPlayerId={options.initialRebuyPlayerId}
       loadUndoPreview={
         options.preview === undefined
           ? nothingToUndo
@@ -313,6 +317,26 @@ describe('rebuy', () => {
       money: { currency: 'EUR', cents: 500 },
       chips: 500,
     })
+  })
+})
+
+// ADR 0003: the needs-rebuy prompt card's "Custom rebuy" secondary deep-
+// links directly into the drawer's existing rebuy view, preselected to the
+// busted viewer, instead of duplicating a second custom-rebuy form.
+describe('initial view deep-link (ADR 0003)', () => {
+  it('opens directly on the rebuy view, preselected to the given player', () => {
+    const s = makeBetweenHandsSnapshot({ playerCount: 3 })
+    const targetId = s.players[1]!.id
+    renderDrawer(s, { initialView: 'rebuy', initialRebuyPlayerId: targetId })
+
+    expect(screen.getByText('Rebuy / Add Chips')).toBeTruthy()
+    const select = screen.getByRole('combobox') as HTMLSelectElement
+    expect(select.value).toBe(targetId)
+  })
+
+  it('defaults to the menu view when no initial view is given (no behavior change)', () => {
+    renderDrawer(makeBetweenHandsSnapshot({ playerCount: 3 }))
+    expect(screen.getByText('Manage Table')).toBeTruthy()
   })
 })
 
